@@ -1,2 +1,2 @@
-# AETH
+# Arithmetic Error Threshold
  
