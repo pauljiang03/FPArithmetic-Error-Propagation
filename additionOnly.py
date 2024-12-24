@@ -1,4 +1,4 @@
-# full IEEE-compliant add with modifiable subnormal handling and sort.
+# full addition only IEEE-compliant add with modifiable subnormal handling and sort.
 # checked using assertion custom_result != ieee_result (ieee_result came from fpAdd)
 
 from z3 import *
@@ -97,9 +97,6 @@ b_nan = is_nan(b_exp, b_mant)
 a_zero = is_zero(a_exp, a_mant)
 b_zero = is_zero(b_exp, b_mant)
 
-# Determine if is subtraction based on signs
-subtract = a_sign != b_sign
-
 # Handle subnormal numbers
 a_is_subnormal = a_exp == 0
 b_is_subnormal = b_exp == 0
@@ -118,11 +115,6 @@ a_exp_int, b_exp_int = BV2Int(a_exp), BV2Int(b_exp)
 a_larger = If(UGT(a_exp, b_exp), True,
               If(a_exp == b_exp, UGE(a_full_mant, b_full_mant), False))
 
-# Handle subtraction, negated addition = subtraction
-neg_a, neg_b = ~a_full_mant + 1, ~b_full_mant + 1
-a_full_mant = If(subtract, If(a_larger, a_full_mant, neg_a), a_full_mant)
-b_full_mant = If(subtract, If(a_larger, neg_b, b_full_mant), b_full_mant)
-
 # Calculate exponent difference for alignment
 exp_diff = If(a_exp_int >= b_exp_int,
               ZeroExt(FULL_MANT_BITS - EXP_BITS, a_effective_exp) - ZeroExt(FULL_MANT_BITS - EXP_BITS, b_effective_exp),
@@ -133,17 +125,9 @@ exp_diff = If(a_exp_int >= b_exp_int,
 max_shift = BitVecVal(FULL_MANT_BITS - 1, FULL_MANT_BITS)
 
 # Prepare operands for addition/subtraction by adding a bit for potential carry
-tempa = If(subtract,
-           If(a_larger,
-              Concat(BitVecVal(0, 1), a_full_mant),  # Add 0 if larger in subtraction
-              Concat(BitVecVal(1, 1), a_full_mant)), # Add 1 if smaller in subtraction
-           Concat(BitVecVal(0, 1), a_full_mant))  # Add 0 for addition
+tempa = Concat(BitVecVal(0, 1), a_full_mant)  # Add 0 for addition
 
-tempb = If(subtract,
-           If(a_larger,
-              Concat(BitVecVal(1, 1), b_full_mant), # Add 1 if larger in subtraction
-              Concat(BitVecVal(0, 1), b_full_mant)), # Add 0 if smaller in subtraction
-           Concat(BitVecVal(0, 1), b_full_mant)) # Add 0 for addition
+tempb = Concat(BitVecVal(0, 1), b_full_mant) # Add 0 for addition
 
 tempa_size = tempa.size()
 
@@ -189,24 +173,19 @@ lz_count = If(UGT(lz_count, sum_exp), sum_exp, lz_count)  # Prevent underflow
 # Calculate normalized exponent
 normalized_exp = If(leading_one == 1, sum_exp + 1, sum_exp)  # Adjust if overflow occurred
 normalized_exp = If(sub_one == 1, normalized_exp + 1, normalized_exp) # Adjust for subnormal result
-normalized_exp = If(subtract, If(leading_one == 1, sum_exp - lz_count, sum_exp - lz_count), normalized_exp)
 
 # Adjust leading zeros count for subnormal results
 lz_count = If(And(normalized_exp == 0, lz_count != 0), lz_count - 1, lz_count)
-# Shift mantissa left to normalize
-sum_mant = If(subtract, sum_mant << ZeroExt(mant_size - EXP_BITS, lz_count), sum_mant)
 
 # Extract normalized mantissa bits
 normalized_mant = If(leading_one == 1,
                      Extract(FULL_MANT_BITS - 1, GRS_BITS + 1, sum_mant),  # Overflow case
                      Extract(FULL_MANT_BITS - 2, GRS_BITS, sum_mant)) # Normal case
-normalized_mant = If(subtract, Extract(FULL_MANT_BITS - 2, GRS_BITS, sum_mant), normalized_mant)
 
 # Extract Guard, Round, and Sticky bits for rounding
 normalized_grs = If(leading_one == 1,
                     Extract(GRS_BITS, 1, sum_mant),
                     Extract(GRS_BITS - 1, 0, sum_mant))
-normalized_grs = If(subtract, Extract(GRS_BITS - 1, 0, sum_mant), normalized_grs)
 
 # Calculate sticky bit for rounding
 sticky_bit = Or(sticky_bits, If(leading_one == 1, Extract(0, 0, sum_mant) != 0,
@@ -255,9 +234,8 @@ s.add(If(b_zero,
 
 # Handle equal numbers and cancellation
 a_equals_b = And(a_sign == b_sign, a_exp == b_exp, a_mant == b_mant, a_grs == b_grs) # Check if numbers are equal
-a_cancels_b = And(a_exp == b_exp, a_mant == b_mant, a_grs == b_grs, a_sign != b_sign) # Check for exact cancellation
-final_sign = If(a_cancels_b, 0, If(a_larger, a_sign, b_sign))  # Determine result sign
-final_exp = If(a_cancels_b, 0, final_exp) # Handle cancellation to zero
+final_sign = If(a_larger, a_sign, b_sign)  # Determine result sign
+final_exp = final_exp # Handle cancellation to zero
 
 # Set final result components
 s.add(result_sign == final_sign)
@@ -279,6 +257,9 @@ s.add(Or(
 
 s.add(a_grs == 0)
 s.add(b_grs == 0)
+s.add(a_sign == 0)
+s.add(b_sign == 0)
+
 
 s.add(result_exp != BitVecVal(2 ** EXP_BITS - 1, EXP_BITS))
 
@@ -328,8 +309,6 @@ if s.check() == sat:
     print("sum_mant =", bv_to_binary(m.eval(sum_mant), EXTENDED_MANT_BITS - 1))
     print("lz_count =", m.eval(lz_count))
     print("sum_exp =", m.eval(sum_exp))
-    print("subtract =", m.eval(subtract))
-    print("acancelb =", m.eval(a_cancels_b))
 
 
     print("normalized_mant =", bv_to_binary(m.eval(normalized_mant), MANT_BITS))
@@ -347,13 +326,9 @@ if s.check() == sat:
 
     print("\nResults:")
     custom_result = m.eval(custom_result)
-    #issue here, why the code won't work for flush to zero is because when its different
-    #ieee_result is already bitvector, but fptoIEEEBV is expecting FP
-    #we can just do m.eval(ieee_result) when its diff, but maybe need fpToIEEEBV for when its same
-    #will require experimentation
     #ieee_result = m.eval(fpToIEEEBV(ieee_result))
     ieee_result = m.eval(ieee_result)
-    #this appears to work? maybe,
+
 
     print("Custom implementation result =", bv_to_binary(custom_result, 16))
     print("IEEE standard result =", bv_to_binary(ieee_result, 16))
