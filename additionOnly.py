@@ -129,14 +129,12 @@ tempa = Concat(BitVecVal(0, 1), a_full_mant)  # Add 0 for addition
 
 tempb = Concat(BitVecVal(0, 1), b_full_mant) # Add 0 for addition
 
-tempa_size = tempa.size()
-
 # Extend exp_diff to match operand size for shifting
-exp_diff_extended = ZeroExt(tempa_size - exp_diff.size(), exp_diff)
+exp_diff_extended = ZeroExt(tempa.size() - exp_diff.size(), exp_diff)
 
 # Align mantissas by shifting the smaller number right
-shift_tempa = If(a_larger, ZeroExt(1, tempa), SignExt(1, tempa >> exp_diff_extended))
-shift_tempb = If(a_larger, SignExt(1, tempb >> exp_diff_extended), ZeroExt(1, tempb))
+shift_tempa = If(a_larger, ZeroExt(1, tempa), ZeroExt(1, tempa >> exp_diff_extended))
+shift_tempb = If(a_larger, ZeroExt(1, tempb >> exp_diff_extended), ZeroExt(1, tempb))
 
 # Extract mantissa portions after alignment
 shifted_a = ZeroExt(1, Extract(FULL_MANT_BITS - 1, 0, shift_tempa))
@@ -206,7 +204,7 @@ final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
 
 final_exp = If(mant_overflow == 1, normalized_exp + 1, normalized_exp)
 
-'handle infinity and nan'
+# handle infinity and nan
 
 s.add(If(Or(a_nan, b_nan),
          And(result_exp == result_exp_inf, result_mant == result_mant_nan, result_sign == 0),
@@ -239,12 +237,9 @@ final_exp = final_exp # Handle cancellation to zero
 
 # Set final result components
 s.add(result_sign == final_sign)
-s.add(result_exp == final_exp)
-s.add(result_mant == final_mant)
 s.add(result_grs == BitVecVal(0, GRS_BITS))
 
-'''
-flush_to_zero = True
+flush_to_zero = False
 
 s.add(Or(
     And(result_exp == final_exp, result_mant == final_mant),
@@ -253,7 +248,7 @@ s.add(Or(
         result_exp == BitVecVal(0, EXP_BITS),
         result_mant == BitVecVal(0, MANT_BITS))
 ))
-'''
+
 
 s.add(a_grs == 0)
 s.add(b_grs == 0)
