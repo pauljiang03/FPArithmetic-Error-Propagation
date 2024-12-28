@@ -3,7 +3,7 @@
 
 from z3 import *
 
-sort = Float16()
+sort = FPSort(5, 11)
 
 SIGN_BITS = 1 # Sign bit (1 bit)
 EXP_BITS = sort.ebits() # Exponent bits (5 for Float16)
