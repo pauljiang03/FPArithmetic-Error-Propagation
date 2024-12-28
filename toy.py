@@ -35,6 +35,7 @@ s = Optimize()
 x_test = FP('x', Float16)
 y_test = FP('y', Float16)
 z_test = FP('z', Float16)
+t = FP('t', Float16)
 
 roundup_x = fp16_to_fp64(x_test)
 roundup_y = fp16_to_fp64(y_test)
@@ -49,9 +50,14 @@ compare_16 = fp16_to_fp64(sum_16)
 
 
 s.add(x_test > 0)
+s.add(x_test < 1)
 s.add(y_test > 0)
-s.add(z_test > 0)
-s.add(z_test == -4.9 * t)
+s.add(y_test < 1)
+s.add(z_test > -5)
+s.add(z_test <= 0)
+s.add(t >= 0)
+s.add(t < 1)
+s.add(z_test == -4.9 * t * t)
 
 
 s.add(Not(fpIsInf(compare_16)))
