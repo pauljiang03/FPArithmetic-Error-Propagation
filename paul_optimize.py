@@ -61,7 +61,7 @@ while True:
 
     if s.check() == sat:
         m = s.model()
-        max_diff = fpAbs(m.eval(sum_32 - compare_16))
+        max_diff = m.eval(fpDiv(RNE(), fpAbs(sum_32 - compare_16), sum_32))
         print(f"After {itr} iterations: {max_diff}")
     else:
         break

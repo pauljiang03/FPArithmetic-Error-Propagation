@@ -26,7 +26,7 @@ def format_fp(binary_str, exp_bits, frac_bits):
     frac = binary_str[1+exp_bits:]
     return f"S:{sign} E:{exp} M:{frac}"
 
-s = Optimize()
+s = Solver()
 
 x_test = FP('x', Float16)
 y_test = FP('y', Float16)
@@ -45,18 +45,13 @@ sum_32 = fpAdd(RNE(), roundup_z, sum_32)
 compare_16 = fp16_to_fp32(sum_16)
 
 s.add(x_test == 234)
-s.add(And(t >= 4, t <= 5))
+s.add(And(t >= 0, t <= 1))
 s.add(y_test == 48 * t)
 s.add(z_test == -4.9 * t * t)
-
 s.add(Not(fpIsInf(compare_16)))
 s.add(sum_32 != compare_16)
-#bvsumsum16 = fpToIEEEBV(compare_16)
-#bvsumsum32 = fpToIEEEBV(sum_32)
-#diff = If(bvsumsum32 > bvsumsum16, bvsumsum32 - bvsumsum16, bvsumsum16 - bvsumsum32)
-diff = If(sum_32 > compare_16, fpSub(RNE(), sum_32, compare_16), fpSub(RNE(), compare_16, sum_32))
-diff = fpToIEEEBV(diff)
-h = s.maximize(diff)
+diff = If(compare_16 > sum_32, fpSub(RNE(), compare_16, sum_32), fpSub(RNE(), sum_32, compare_16))
+s.add(diff == 1*(2**-2))
 
 if s.check() == sat:
     m = s.model()
@@ -72,15 +67,15 @@ if s.check() == sat:
     print(f"sum16 = {m.eval(compare_16)}")
     print(f"diff = {m.eval(sum_32 - compare_16)}")
 
-    diff_val = m.eval(diff)
+    diff_val = m.eval(fpToIEEEBV(diff))
     binary_str = bv_to_binary_str(diff_val)
     print(f"Diff as binary: {binary_str}")
 
-    #sum32_binary = bv_to_binary_str(m.eval(bvsumsum32))
-    #sum16_binary = bv_to_binary_str(m.eval(bvsumsum16))
+    sum32_binary = bv_to_binary_str(m.eval(fpToIEEEBV(sum_32)))
+    sum16_binary = bv_to_binary_str(m.eval(fpToIEEEBV(compare_16)))
 
-    #print("\nBinary representations:")
-    #print(f"sum32: {format_fp(sum32_binary, 8, 23)}")
-    #print(f"sum16: {format_fp(sum16_binary, 8, 23)}")
+    print("\nBinary representations:")
+    print(f"sum32: {format_fp(sum32_binary, 8, 23)}")
+    print(f"sum16: {format_fp(sum16_binary, 8, 23)}")
 else:
     print("unsat")
