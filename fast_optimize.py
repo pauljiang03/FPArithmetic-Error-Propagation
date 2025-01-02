@@ -52,7 +52,7 @@ while True:
 
     if s.check() == sat:
         m = s.model()
-        max_diff = fpAbs(m.eval(sum_32 - compare_16))
+        max_diff = m.eval(fpAbs(sum_32 - compare_16))
         print(f"After {itr} iterations: {max_diff}")
     else:
         break
