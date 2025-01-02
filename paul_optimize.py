@@ -33,18 +33,18 @@ while True:
     a_32 = FPVal(9.80665 * 0.5, Float32)
 
     x_16 = x_0
-    v_16 = v_0 * t
-    z_16 = a_16 * t * t
+    v_16 = fpMul(RNE(), v_0, t)
+    z_16 = fpMul(RNE(), fpMul(RNE(), a_16, t), t)
 
     x_32 = fp16_to_fp32(x_0)
     v_32 = fp16_to_fp32(v_0)
     t_32 = fp16_to_fp32(t)
 
-    v_32_fin = v_32 * t_32
-    z_32_fin = a_32 * t_32 * t_32
+    v_32_fin = fpMul(RNE(), v_32, t_32)
+    z_32_fin = fpMul(RNE(), fpMul(RNE(),a_32, t_32), t_32)
 
-    sum_16 = fpAdd(RNE(), x_16, v_16)
-    sum_16 = fpAdd(RNE(), z_16, sum_16)
+    sum_16 = fpAdd(RTZ(), x_16, v_16)
+    sum_16 = fpAdd(RTZ(), z_16, sum_16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 
@@ -61,7 +61,7 @@ while True:
 
     if s.check() == sat:
         m = s.model()
-        max_diff = m.eval(fpDiv(RNE(), fpAbs(sum_32 - compare_16), sum_32))
+        max_diff = m.eval(fpAbs(sum_32 - compare_16))
         print(f"After {itr} iterations: {max_diff}")
     else:
         break
