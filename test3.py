@@ -26,8 +26,8 @@ def format_fp(binary_str, exp_bits, frac_bits):
     frac = binary_str[1+exp_bits:]
     return f"S:{sign} E:{exp} M:{frac}"
 
-#s = Solver()
-s = Optimize()
+s = Solver()
+#s = Optimize()
 
 x_test = FP('x', Float16)
 y_test = FP('y', Float16)
@@ -53,7 +53,6 @@ s.add(Not(fpIsInf(compare_16)))
 s.add(sum_32 != compare_16)
 diff = If(compare_16 > sum_32, fpSub(RNE(), compare_16, sum_32), fpSub(RNE(), sum_32, compare_16))
 s.add(diff > 0.375)
-#s.maximize(fpToIEEEBV(diff))
 
 if s.check() == sat:
     m = s.model()
