@@ -35,8 +35,10 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
     result_mant_inf = BitVecVal(0, MANT_BITS)
 
-    a = ZeroExt(GRS_BITS, fpToIEEEBV(x))
-    b = ZeroExt(GRS_BITS, fpToIEEEBV(y))
+    #a = ZeroExt(GRS_BITS, fpToIEEEBV(x))
+    #b = ZeroExt(GRS_BITS, fpToIEEEBV(y))
+    a = Concat(fpToIEEEBV(x), BitVecVal(0, 3))
+    b = Concat(fpToIEEEBV(y), BitVecVal(0, 3))
     result = BitVec('result', TOTAL_BITS)
 
     # Split inputs and result into components (sign, exponent, mantissa, GRS bits)
@@ -68,12 +70,12 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
         s.add(grs == Extract(GRS_BITS - 1, 0, x))'''
 
     # Check for special cases
-    '''a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
+    a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
     b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
     a_nan = is_nan(a_exp, a_mant, EXP_BITS)
     b_nan = is_nan(b_exp, b_mant, EXP_BITS)
     a_zero = is_zero(a_exp, a_mant)
-    b_zero = is_zero(b_exp, b_mant)'''
+    b_zero = is_zero(b_exp, b_mant)
 
     # Determine if is subtraction based on signs
     subtract = a_sign != b_sign
@@ -211,6 +213,4 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     final_sign = If(a_cancels_b, 0, If(a_larger, a_sign, b_sign))  # Determine result sign
     final_exp = If(a_cancels_b, 0, final_exp)  # Handle cancellation to zero
     custom_result = Extract(TOTAL_BITS - 1, GRS_BITS, result)
-    return fpBVToFP(custom_result, sort)
-
-
+    return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)

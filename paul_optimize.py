@@ -6,17 +6,25 @@ Float16 = FPSort(5, 11)
 Float32 = FPSort(8, 24)
 Float64 = FPSort(11, 53)
 
+
 def fp16_to_fp32(x):
     return fpFPToFP(RNE(), x, Float32)
+
+
+def bv_to_binary(bv, width):
+    return format(bv.as_long(), f'0{width}b')
+
 
 def bv_to_binary_str(bv):
     return bin(bv.as_long())[2:].zfill(bv.size())
 
+
 def format_fp(binary_str, exp_bits, frac_bits):
     sign = binary_str[0]
-    exp = binary_str[1:1+exp_bits]
-    frac = binary_str[1+exp_bits:]
+    exp = binary_str[1:1 + exp_bits]
+    frac = binary_str[1 + exp_bits:]
     return f"S:{sign} E:{exp} M:{frac}"
+
 
 max_diff = 0
 itr = 0
@@ -42,19 +50,19 @@ while True:
     t_32 = fp16_to_fp32(t)
 
     v_32_fin = fpMul(RNE(), v_32, t_32)
-    z_32_fin = fpMul(RNE(), fpMul(RNE(),a_32, t_32), t_32)
+    z_32_fin = fpMul(RNE(), fpMul(RNE(), a_32, t_32), t_32)
 
-    sum_16_original = fpAdd(RTZ(), x_16, v_16)
-    sum_16_original = fpAdd(RTZ(), z_16, sum_16_original)
-    sum_16_1 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
-    sum_16 = manual_fp_sum.fp_sum(z_16, sum_16_1, Float16)
+    #sum_16_original = fpAdd(RNE(), x_16, v_16)
+    #sum_16_original = fpAdd(RNE(), z_16, sum_16_original)
+    sum_16 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
+    sum_16 = manual_fp_sum.fp_sum(z_16, sum_16, Float16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 
     compare_16 = fp16_to_fp32(sum_16)
 
     s.add(x_0 == 5)
-    s.add(And(t == 0.25, t == 0.25))
+    s.add(And(t >= 0, t <= 1))
     s.add(v_0 == 10)
     s.add(Not(fpIsInf(compare_16)))
     s.add(sum_32 != compare_16)
@@ -65,7 +73,7 @@ while True:
     if s.check() == sat:
         m = s.model()
         max_diff = m.eval(fpAbs(sum_32 - compare_16))
-        print(f"After {itr} iterations: {max_diff} {m.eval(sum_16_1)} {m.eval(sum_16)} {m.eval(sum_16_original)}")
+        print(f"After {itr} iterations: {max_diff}")
     else:
         break
 
