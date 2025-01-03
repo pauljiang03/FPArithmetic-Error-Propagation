@@ -1,5 +1,6 @@
 from z3 import *
 import time
+import manual_fp_sum
 
 Float16 = FPSort(5, 11)
 Float32 = FPSort(8, 24)
@@ -43,16 +44,18 @@ while True:
     v_32_fin = fpMul(RNE(), v_32, t_32)
     z_32_fin = fpMul(RNE(), fpMul(RNE(),a_32, t_32), t_32)
 
-    sum_16 = fpAdd(RTZ(), x_16, v_16)
-    sum_16 = fpAdd(RTZ(), z_16, sum_16)
+    sum_16_original = fpAdd(RTZ(), x_16, v_16)
+    sum_16_original = fpAdd(RTZ(), z_16, sum_16_original)
+    sum_16_1 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
+    sum_16 = manual_fp_sum.fp_sum(z_16, sum_16_1, Float16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 
     compare_16 = fp16_to_fp32(sum_16)
 
-    s.add(x_0 == 50)
-    s.add(And(t >= 0, t <= 30))
-    s.add(v_0 == 100)
+    s.add(x_0 == 5)
+    s.add(And(t == 0.25, t == 0.25))
+    s.add(v_0 == 10)
     s.add(Not(fpIsInf(compare_16)))
     s.add(sum_32 != compare_16)
     diff = If(compare_16 > sum_32, fpSub(RNE(), compare_16, sum_32), fpSub(RNE(), sum_32, compare_16))
@@ -62,7 +65,7 @@ while True:
     if s.check() == sat:
         m = s.model()
         max_diff = m.eval(fpAbs(sum_32 - compare_16))
-        print(f"After {itr} iterations: {max_diff}")
+        print(f"After {itr} iterations: {max_diff} {m.eval(sum_16_1)} {m.eval(sum_16)} {m.eval(sum_16_original)}")
     else:
         break
 
