@@ -130,9 +130,11 @@ product_mant = ZeroExt(b_size, a_full_mant) * ZeroExt(a_size, b_full_mant)
 num_neg_exp = If(And(a_negative, b_negative), 2, If(And(Not(a_negative), Not(b_negative)), 0, 1))
 product_exp_unbiased = a_effective_exp + b_effective_exp
 #product_exp_unbiased = If(num_neg_exp == 2, product_exp_unbiased - BIAS, If(num_neg_exp == 1, product_exp_unbiased - BIAS, product_exp_unbiased - BIAS))
+test1 = product_exp_unbiased
 product_exp_unbiased = product_exp_unbiased - BIAS
+test2 = product_exp_unbiased
+zero = If(UGT(product_exp_unbiased, 64), True, False)
 product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
-
 # Check normalization needs
 leading_one = Extract(product_size-1, product_size-1, product_mant)
 
@@ -141,13 +143,20 @@ normalized_exp = If(leading_one == 1,
                    product_exp_unbiased + 1,
                    product_exp_unbiased)
 
-normalized_mant = If(leading_one == 1,
-                    Extract(product_size-2, product_size-MANT_BITS-1, product_mant),
-                    Extract(product_size-3, product_size-MANT_BITS-2, product_mant))
+#normalized_mant = If(leading_one == 1,
+                    #Extract(product_size-1, product_size-MANT_BITS, product_mant),
+                    #Extract(product_size-3, product_size-MANT_BITS-2, product_mant))
+normalized_mant = If(normalized_exp == 0, If(leading_one == 1,
+                    Extract(product_size-1, product_size-MANT_BITS, product_mant),
+                    Extract(product_size-2, product_size-MANT_BITS-1, product_mant)), If(leading_one == 1,
+                    Extract(product_size-1, product_size-MANT_BITS, product_mant),
+                    Extract(product_size-3, product_size-MANT_BITS-2, product_mant)))
 
-normalized_grs = If(leading_one == 1,
+normalized_grs = If(normalized_exp == 0, If(leading_one == 1,
+                   Extract(product_size-MANT_BITS-1, product_size-MANT_BITS-3, product_mant),
+                   Extract(product_size-MANT_BITS-2, product_size-MANT_BITS-4, product_mant)),  If(leading_one == 1,
                    Extract(product_size-MANT_BITS-2, product_size-MANT_BITS-4, product_mant),
-                   Extract(product_size-MANT_BITS-3, product_size-MANT_BITS-5, product_mant))
+                   Extract(product_size-MANT_BITS-3, product_size-MANT_BITS-5, product_mant)))
 
 # Calculate sticky bit from remaining bits
 sticky_bits = UGT(Extract(product_size-MANT_BITS-5, 0, product_mant), 0)
@@ -177,11 +186,17 @@ final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
 final_exp_extended = If(mant_overflow == 1,
                        Extract(extended_exp_bits-1, 0, normalized_exp + 1),
                        normalized_exp)
+infinity = If(UGT(final_exp_extended, 31), True, False)
 final_exp = Extract(EXP_BITS-1, 0, final_exp_extended)
 # Calculate final sign (XOR of input signs)
 final_sign = a_sign ^ b_sign
 
 # Handle all special cases
+final_exp = If(zero, 0, final_exp)
+final_mant = If(zero, 0, final_mant)
+final_exp = If(infinity, 31, final_exp)
+final_mant = If(infinity, 0, final_mant)
+
 
 s.add(If(Or(a_nan, b_nan),
          # If either input is NaN, result is NaN
@@ -227,10 +242,12 @@ s.add(ieee_result == fpMul(RNE(), a_fp, b_fp))
 ieee_exp = Extract(14, 10, fpToIEEEBV(ieee_result))
 custom_exp = Extract(14, 10, custom_result)
 
+
+#s.add(fpToIEEEBV(ieee_result) != custom_result)
 # Add constraint that they must be different
 s.add(ieee_exp != custom_exp)
-s.add(ieee_exp != custom_exp + 1)
-s.add(ieee_exp != custom_exp - 1)
+#s.add(ieee_exp != custom_exp + 1)
+#s.add(ieee_exp != custom_exp - 1)
 
 
 #s.add(fpToIEEEBV(ieee_result) != custom_result)
@@ -238,25 +255,33 @@ s.add(ieee_exp != custom_exp - 1)
 # Add constraints for initial GRS bits
 s.add(a_grs == 0)
 s.add(b_grs == 0)
-s.add(Not(a_inf))  # a is not infinity
-s.add(Not(b_inf))  # b is not infinity
-s.add(Not(a_nan))  # a is not NaN
-s.add(Not(b_nan))
+
 s.add(Not(a_is_subnormal))
 s.add(Not(b_is_subnormal))
-s.add(Not(is_infinity(
-    Extract(14, 10, fpToIEEEBV(ieee_result)),  # exponent
-    Extract(9, 0, fpToIEEEBV(ieee_result))     # mantissa
-)))
+
+#s.add(ieee_exp != 0)
+
+'''
+s.add(a_sign == BitVecVal(0, SIGN_BITS))
+s.add(a_exp == BitVecVal(1, EXP_BITS))
+s.add(a_mant == BitVecVal(int('0010110010', 2), MANT_BITS))
+s.add(a_grs == BitVecVal(0, GRS_BITS))
+
+s.add(b_sign == BitVecVal(0, SIGN_BITS))
+s.add(b_exp == BitVecVal(2, EXP_BITS))
+s.add(b_mant == BitVecVal(int('1011011011', 2), MANT_BITS))
+s.add(b_grs == BitVecVal(0, GRS_BITS))
+'''
+
 '''
 s.add(a_sign == BitVecVal(1, SIGN_BITS))
-s.add(a_exp == BitVecVal(3, EXP_BITS))
+s.add(a_exp == BitVecVal(8, EXP_BITS))
 s.add(a_mant == BitVecVal(int('0000110010', 2), MANT_BITS))
 s.add(a_grs == BitVecVal(0, GRS_BITS))
 
-s.add(b_sign == BitVecVal(1, SIGN_BITS))
-s.add(b_exp == BitVecVal(12, EXP_BITS))
-s.add(b_mant == BitVecVal(int('0110101101', 2), MANT_BITS))
+s.add(b_sign == BitVecVal(0, SIGN_BITS))
+s.add(b_exp == BitVecVal(7, EXP_BITS))
+s.add(b_mant == BitVecVal(int('1110100000', 2), MANT_BITS))
 s.add(b_grs == BitVecVal(0, GRS_BITS))
 '''
 
@@ -282,6 +307,11 @@ if s.check() == sat:
     print("b_is_subnormal =", m.eval(b_is_subnormal))
     print("a_exp =", m.eval(a_exp))
     print("b_exp =", m.eval(b_exp))
+    print("zero =", m.eval(zero))
+    print("test1 =", m.eval(test1))
+    print("test2 =", m.eval(test2))
+
+
 
     print("a_effective_exp =", m.eval(a_effective_exp))
     print("b_effective_exp =", m.eval(b_effective_exp))
