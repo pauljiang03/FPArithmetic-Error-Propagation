@@ -108,13 +108,11 @@ a_exp_adjust = If(a_is_subnormal, get_subnormal_exp_adjust(a_mant), BitVecVal(0,
 b_exp_adjust = If(b_is_subnormal, get_subnormal_exp_adjust(b_mant), BitVecVal(0, EXP_BITS))
 
 extended_exp_bits = EXP_BITS + 2
-a_effective_exp = If(a_is_subnormal,
-                    BitVecVal(-BIAS + 1, extended_exp_bits) - SignExt(2, a_exp_adjust),
-                    SignExt(2, a_exp) - BIAS)
-b_effective_exp = If(b_is_subnormal,
-                    BitVecVal(-BIAS + 1, extended_exp_bits) - SignExt(2, b_exp_adjust),
-                    SignExt(2, b_exp) - BIAS)
 
+a_negative = ULT(a_exp, BitVecVal(BIAS, EXP_BITS))
+b_negative = ULT(b_exp, BitVecVal(BIAS, EXP_BITS))
+a_effective_exp = ZeroExt(2, a_exp)
+b_effective_exp = ZeroExt(2, b_exp)
 
 a_full_mant = If(a_is_subnormal,
                  normalize_subnormal(a_mant, a_is_subnormal),
@@ -126,16 +124,22 @@ b_full_mant = If(b_is_subnormal,
 product_mant = ZeroExt(b_size, a_full_mant) * ZeroExt(a_size, b_full_mant)
 
 # Add exponents (they're already unbiased)
+#product_exp_unbiased = If(a_negative, -a_effective_exp, a_effective_exp) + If(b_negative, -b_effective_exp, b_effective_exp)
+#product_exp_unbiased = If(And(Not(a_negative), Not(b_negative)), product_exp_unbiased - BIAS, product_exp_unbiased)
+#temp_print = product_exp_unbiased
+num_neg_exp = If(And(a_negative, b_negative), 2, If(And(Not(a_negative), Not(b_negative)), 0, 1))
 product_exp_unbiased = a_effective_exp + b_effective_exp
-product_exp = Extract(EXP_BITS-1, 0, product_exp_unbiased + BIAS)
+#product_exp_unbiased = If(num_neg_exp == 2, product_exp_unbiased - BIAS, If(num_neg_exp == 1, product_exp_unbiased - BIAS, product_exp_unbiased - BIAS))
+product_exp_unbiased = product_exp_unbiased - BIAS
+product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
 
 # Check normalization needs
 leading_one = Extract(product_size-1, product_size-1, product_mant)
 
 # Handle normalization
 normalized_exp = If(leading_one == 1,
-                   product_exp + 1,
-                   product_exp)
+                   product_exp_unbiased + 1,
+                   product_exp_unbiased)
 
 normalized_mant = If(leading_one == 1,
                     Extract(product_size-2, product_size-MANT_BITS-1, product_mant),
@@ -170,13 +174,15 @@ rounded_mant_extended = ZeroExt(1, normalized_mant) + rounding_increment
 mant_overflow = Extract(MANT_BITS, MANT_BITS, rounded_mant_extended)
 
 final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
-final_exp = If(mant_overflow == 1, normalized_exp + 1, normalized_exp)
-
+final_exp_extended = If(mant_overflow == 1,
+                       Extract(extended_exp_bits-1, 0, normalized_exp + 1),
+                       normalized_exp)
+final_exp = Extract(EXP_BITS-1, 0, final_exp_extended)
 # Calculate final sign (XOR of input signs)
 final_sign = a_sign ^ b_sign
 
 # Handle all special cases
-# Handle all special cases
+
 s.add(If(Or(a_nan, b_nan),
          # If either input is NaN, result is NaN
          And(result_exp == result_exp_inf,
@@ -217,11 +223,42 @@ custom_result = Extract(TOTAL_BITS - 1, GRS_BITS, result)
 
 # Compare against IEEE multiplication
 s.add(ieee_result == fpMul(RNE(), a_fp, b_fp))
-s.add(fpToIEEEBV(ieee_result) != custom_result)
+
+ieee_exp = Extract(14, 10, fpToIEEEBV(ieee_result))
+custom_exp = Extract(14, 10, custom_result)
+
+# Add constraint that they must be different
+s.add(ieee_exp != custom_exp)
+s.add(ieee_exp != custom_exp + 1)
+s.add(ieee_exp != custom_exp - 1)
+
+
+#s.add(fpToIEEEBV(ieee_result) != custom_result)
 
 # Add constraints for initial GRS bits
 s.add(a_grs == 0)
 s.add(b_grs == 0)
+s.add(Not(a_inf))  # a is not infinity
+s.add(Not(b_inf))  # b is not infinity
+s.add(Not(a_nan))  # a is not NaN
+s.add(Not(b_nan))
+s.add(Not(a_is_subnormal))
+s.add(Not(b_is_subnormal))
+s.add(Not(is_infinity(
+    Extract(14, 10, fpToIEEEBV(ieee_result)),  # exponent
+    Extract(9, 0, fpToIEEEBV(ieee_result))     # mantissa
+)))
+'''
+s.add(a_sign == BitVecVal(1, SIGN_BITS))
+s.add(a_exp == BitVecVal(3, EXP_BITS))
+s.add(a_mant == BitVecVal(int('0000110010', 2), MANT_BITS))
+s.add(a_grs == BitVecVal(0, GRS_BITS))
+
+s.add(b_sign == BitVecVal(1, SIGN_BITS))
+s.add(b_exp == BitVecVal(12, EXP_BITS))
+s.add(b_mant == BitVecVal(int('0110101101', 2), MANT_BITS))
+s.add(b_grs == BitVecVal(0, GRS_BITS))
+'''
 
 if s.check() == sat:
     m = s.model()
@@ -243,20 +280,28 @@ if s.check() == sat:
     print("\nIntermediate values:")
     print("a_is_subnormal =", m.eval(a_is_subnormal))
     print("b_is_subnormal =", m.eval(b_is_subnormal))
+    print("a_exp =", m.eval(a_exp))
+    print("b_exp =", m.eval(b_exp))
+
     print("a_effective_exp =", m.eval(a_effective_exp))
     print("b_effective_exp =", m.eval(b_effective_exp))
+    print("a_exp_neg =", m.eval(a_negative))
+    print("b_exp_neg =", m.eval(b_negative))
+
     print("a_full_mant =", bv_to_binary(m.eval(a_full_mant), FULL_MANT_BITS))
     print("b_full_mant =", bv_to_binary(m.eval(b_full_mant), FULL_MANT_BITS))
 
     print("\nProduct intermediate:")
     print("product_mant =", bv_to_binary(m.eval(product_mant), product_size))
-    print("product_exp =", m.eval(product_exp))
+    print("product_exp_unbias =", m.eval(product_exp_unbiased))
     print("leading_one =", m.eval(leading_one))
 
     print("\nNormalization results:")
     print("normalized_mant =", bv_to_binary(m.eval(normalized_mant), MANT_BITS))
     print("normalized_grs =", bv_to_binary(m.eval(normalized_grs), GRS_BITS))
     print("normalized_exp =", m.eval(normalized_exp))
+    #print("temp_print =", m.eval(temp_print))
+
 
     print("\nRounding info:")
     print("sticky_bit =", m.eval(sticky_bit))
@@ -265,6 +310,10 @@ if s.check() == sat:
     print("round_up =", m.eval(round_up))
     print("rounded_mant_extended =", bv_to_binary(m.eval(rounded_mant_extended), MANT_BITS + 1))
     print("mant_overflow =", m.eval(mant_overflow))
+    print("fin_exp_ext =", bv_to_binary(m.eval(final_exp_extended), 7))
+    print("fin_exp_ext =", bv_to_binary(m.eval(final_exp), 5))
+
+
 
     print("\nFinal components:")
     print("final_sign =", m.eval(final_sign))
