@@ -52,10 +52,10 @@ while True:
     v_32_fin = fpMul(RNE(), v_32, t_32)
     z_32_fin = fpMul(RNE(), fpMul(RNE(), a_32, t_32), t_32)
 
-    #sum_16_original = fpAdd(RNE(), x_16, v_16)
-    #sum_16_original = fpAdd(RNE(), z_16, sum_16_original)
-    sum_16 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
-    sum_16 = manual_fp_sum.fp_sum(z_16, sum_16, Float16)
+    sum_16 = fpAdd(RNE(), x_16, v_16)
+    sum_16 = fpAdd(RNE(), z_16, sum_16)
+    #sum_16 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
+    #sum_16 = manual_fp_sum.fp_sum(z_16, sum_16, Float16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 

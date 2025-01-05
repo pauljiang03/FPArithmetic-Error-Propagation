@@ -28,29 +28,13 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     MANT_BITS = sort.sbits() - 1  # Mantissa bits minus implicit bit (.sbits() returns 11 for mant)
     GRS_BITS = 3  # Guard, Round, and Sticky bits
     TOTAL_BITS = SIGN_BITS + EXP_BITS + MANT_BITS + GRS_BITS
-    BIAS = 2 ** (EXP_BITS - 1) - 1  # Exponent bias (15 for Float16)
     FULL_MANT_BITS = 1 + MANT_BITS + GRS_BITS  # Full mantissa including implicit and GRS bits
     EXTENDED_MANT_BITS = FULL_MANT_BITS + 1  # Extended mantissa for intermediate calculations
-    result_exp_inf = BitVecVal(2 ** EXP_BITS - 1, EXP_BITS)
-    result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
-    result_mant_inf = BitVecVal(0, MANT_BITS)
 
-    #a = ZeroExt(GRS_BITS, fpToIEEEBV(x))
-    #b = ZeroExt(GRS_BITS, fpToIEEEBV(y))
     a = Concat(fpToIEEEBV(x), BitVecVal(0, 3))
     b = Concat(fpToIEEEBV(y), BitVecVal(0, 3))
-    result = BitVec('result', TOTAL_BITS)
 
     # Split inputs and result into components (sign, exponent, mantissa, GRS bits)
-    '''a_sign, a_exp, a_mant, a_grs = BitVec('a_sign', SIGN_BITS), BitVec('a_exp', EXP_BITS), BitVec('a_mant',
-                                                                                                  MANT_BITS), BitVec(
-        'a_grs', GRS_BITS)
-    b_sign, b_exp, b_mant, b_grs = BitVec('b_sign', SIGN_BITS), BitVec('b_exp', EXP_BITS), BitVec('b_mant',
-                                                                                                  MANT_BITS), BitVec(
-        'b_grs', GRS_BITS)
-    result_sign, result_exp, result_mant, result_grs = BitVec('result_sign', SIGN_BITS), BitVec('result_exp',
-                                                                                                EXP_BITS), BitVec(
-        'result_mant', MANT_BITS), BitVec('result_grs', GRS_BITS)'''
     a_sign = Extract(TOTAL_BITS - 1, TOTAL_BITS - SIGN_BITS, a)
     a_exp = Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, a)
     a_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, a)
@@ -59,23 +43,6 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     b_exp = Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, b)
     b_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, b)
     b_grs = Extract(GRS_BITS - 1, 0, b)
-
-    # Extract components from bitvectors
-    '''for x, sign, exp, mant, grs in [(a, a_sign, a_exp, a_mant, a_grs),
-                                    (b, b_sign, b_exp, b_mant, b_grs),
-                                    (result, result_sign, result_exp, result_mant, result_grs)]:
-        s.add(sign == Extract(TOTAL_BITS - 1, TOTAL_BITS - SIGN_BITS, x))
-        s.add(exp == Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, x))
-        s.add(mant == Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, x))
-        s.add(grs == Extract(GRS_BITS - 1, 0, x))'''
-
-    # Check for special cases
-    a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
-    b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
-    a_nan = is_nan(a_exp, a_mant, EXP_BITS)
-    b_nan = is_nan(b_exp, b_mant, EXP_BITS)
-    a_zero = is_zero(a_exp, a_mant)
-    b_zero = is_zero(b_exp, b_mant)
 
     # Determine if is subtraction based on signs
     subtract = a_sign != b_sign
@@ -149,7 +116,6 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     extended_sum_mant = shifted_a + shifted_b
     leading_one = Extract(EXTENDED_MANT_BITS - 1, EXTENDED_MANT_BITS - 1, extended_sum_mant)  # Check for overflow
     sum_mant = Extract(EXTENDED_MANT_BITS - 2, 0, extended_sum_mant)
-    test_mant = sum_mant
 
     # Handle subnormal results
     sub_one = Extract(EXTENDED_MANT_BITS - 2, EXTENDED_MANT_BITS - 2, sum_mant)
@@ -207,10 +173,8 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     final_exp = If(mant_overflow == 1, normalized_exp + 1, normalized_exp)
 
     # Handle equal numbers and cancellation
-    a_equals_b = And(a_sign == b_sign, a_exp == b_exp, a_mant == b_mant, a_grs == b_grs)  # Check if numbers are equal
     a_cancels_b = And(a_exp == b_exp, a_mant == b_mant, a_grs == b_grs,
                       a_sign != b_sign)  # Check for exact cancellation
     final_sign = If(a_cancels_b, 0, If(a_larger, a_sign, b_sign))  # Determine result sign
     final_exp = If(a_cancels_b, 0, final_exp)  # Handle cancellation to zero
-    custom_result = Extract(TOTAL_BITS - 1, GRS_BITS, result)
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
