@@ -151,7 +151,7 @@ normalized_exp = If(leading_one == 1,
 normalized_mant = If(normalized_exp == 0, If(leading_one == 1,
                     Extract(product_size-1, product_size-MANT_BITS, product_mant),
                     Extract(product_size-2, product_size-MANT_BITS-1, product_mant)), If(leading_one == 1,
-                    Extract(product_size-1, product_size-MANT_BITS, product_mant),
+                    Extract(product_size-2, product_size-MANT_BITS-1, product_mant),
                     Extract(product_size-3, product_size-MANT_BITS-2, product_mant)))
 
 normalized_grs = If(normalized_exp == 0, If(leading_one == 1,
@@ -242,12 +242,14 @@ custom_result = Extract(TOTAL_BITS - 1, GRS_BITS, result)
 s.add(ieee_result == fpMul(RNE(), a_fp, b_fp))
 
 ieee_exp = Extract(14, 10, fpToIEEEBV(ieee_result))
+ieee_mant = Extract(9, 0, fpToIEEEBV(ieee_result))
+
 custom_exp = Extract(14, 10, custom_result)
 
 
-#s.add(fpToIEEEBV(ieee_result) != custom_result)
+s.add(fpToIEEEBV(ieee_result) != custom_result)
 # Add constraint that they must be different
-s.add(ieee_exp != custom_exp)
+#s.add(ieee_exp != custom_exp)
 #s.add(ieee_exp != custom_exp + 1)
 #s.add(ieee_exp != custom_exp - 1)
 
@@ -258,10 +260,20 @@ s.add(ieee_exp != custom_exp)
 s.add(a_grs == 0)
 s.add(b_grs == 0)
 
-#s.add(Not(a_is_subnormal))
-#s.add(Not(b_is_subnormal))
 
-#s.add(ieee_exp != 0)
+s.add(Not(a_is_subnormal))
+s.add(Not(b_is_subnormal))
+
+
+#s.add(Not(is_nan(a_exp, a_mant)))
+#s.add(Not(is_nan(b_exp, b_mant)))
+#s.add(Not(is_nan(ieee_exp, ieee_mant)))
+#s.add(Not(is_subnormal(ieee_exp, ieee_mant)))
+
+
+s.add(ieee_exp != 0)
+
+s.add(ieee_exp != 31)
 
 '''
 s.add(a_sign == BitVecVal(0, SIGN_BITS))
