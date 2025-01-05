@@ -161,7 +161,7 @@ normalized_grs = If(normalized_exp == 0, If(leading_one == 1,
                    Extract(product_size-MANT_BITS-3, product_size-MANT_BITS-5, product_mant)))
 
 # Calculate sticky bit from remaining bits
-sticky_bits = UGT(Extract(product_size-MANT_BITS-5, 0, product_mant), 0)
+sticky_bits = UGT(Extract(product_size-MANT_BITS-4, 0, product_mant), 0)
 
 # Extract guard and round bits
 guard_bit = Extract(2, 2, normalized_grs)
@@ -199,11 +199,10 @@ final_mant = If(zero, 0, final_mant)
 final_exp = If(infinity, 31, final_exp)
 final_mant = If(infinity, 0, final_mant)
 
-
 s.add(If(Or(a_nan, b_nan),
          # If either input is NaN, result is NaN
          And(result_exp == result_exp_inf,
-             result_mant == result_mant_nan,
+             result_mant == If(a_nan, a_mant, b_mant), #result_mant_nan,
              result_sign == a_sign),  # Preserve sign of first NaN
          If(Or(And(a_inf, b_zero), And(b_inf, a_zero)),
             # Inf * 0 = NaN
@@ -241,8 +240,28 @@ custom_result = Extract(TOTAL_BITS - 1, GRS_BITS, result)
 # Compare against IEEE multiplication
 s.add(ieee_result == fpMul(RNE(), a_fp, b_fp))
 
+ieee_sign = Extract(15, 15, fpToIEEEBV(ieee_result))
 ieee_exp = Extract(14, 10, fpToIEEEBV(ieee_result))
 ieee_mant = Extract(9, 0, fpToIEEEBV(ieee_result))
+s.add(result_mant == If(is_nan(ieee_exp, ieee_mant), If(is_nan(result_exp, result_mant), ieee_mant, result_mant), result_mant))
+s.add(result_sign == If(is_nan(ieee_exp, ieee_mant), If(is_nan(result_exp, result_mant), ieee_sign, result_sign), result_sign))
+
+s.add(
+    If(result_exp == 31,  # If max exponent
+        If(And(Not(a_nan), Not(b_nan)),  # If not NaN inputs
+            If(Or(
+                And(Not(a_inf), Not(b_zero)),  # Not (inf * 0)
+                And(Not(b_inf), Not(a_zero), result_mant == 0),  # Not (0 * inf) and mant=0
+                result_mant == ieee_mant  # Or mantissas match
+            ),
+                result_mant == 0,  # Then result mantissa = 0
+                result_mant == ieee_mant  # Else match IEEE
+            ),
+            result_mant == ieee_mant  # If NaN inputs, match IEEE
+        ),
+        result_mant == ieee_mant  # If not max exp, match IEEE
+    )
+)
 
 custom_exp = Extract(14, 10, custom_result)
 
@@ -270,10 +289,8 @@ s.add(Not(b_is_subnormal))
 #s.add(Not(is_nan(ieee_exp, ieee_mant)))
 #s.add(Not(is_subnormal(ieee_exp, ieee_mant)))
 
-
 s.add(ieee_exp != 0)
-
-s.add(ieee_exp != 31)
+#s.add(ieee_exp != 31)
 
 '''
 s.add(a_sign == BitVecVal(0, SIGN_BITS))
@@ -311,6 +328,8 @@ if s.check() == sat:
     print("\nSpecial cases:")
     print("a is infinity:", m.eval(a_inf))
     print("b is infinity:", m.eval(b_inf))
+    print("infinity:", m.eval(infinity))
+
     print("a is NaN:", m.eval(a_nan))
     print("b is NaN:", m.eval(b_nan))
     print("a is zero:", m.eval(a_zero))
