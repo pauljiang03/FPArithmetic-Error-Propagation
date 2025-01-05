@@ -31,8 +31,8 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     FULL_MANT_BITS = 1 + MANT_BITS + GRS_BITS  # Full mantissa including implicit and GRS bits
     EXTENDED_MANT_BITS = FULL_MANT_BITS + 1  # Extended mantissa for intermediate calculations
 
-    a = Concat(fpToIEEEBV(x), BitVecVal(0, 3))
-    b = Concat(fpToIEEEBV(y), BitVecVal(0, 3))
+    a = Concat(fpToIEEEBV(x), BitVecVal(0, GRS_BITS))
+    b = Concat(fpToIEEEBV(y), BitVecVal(0, GRS_BITS))
 
     # Split inputs and result into components (sign, exponent, mantissa, GRS bits)
     a_sign = Extract(TOTAL_BITS - 1, TOTAL_BITS - SIGN_BITS, a)

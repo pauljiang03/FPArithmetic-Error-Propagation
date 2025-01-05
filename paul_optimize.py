@@ -1,6 +1,7 @@
 from z3 import *
 import time
-import manual_fp_sum
+from manual_fp_sum import fp_sum
+from manual_fp_mul import fp_mul
 
 Float16 = FPSort(5, 11)
 Float32 = FPSort(8, 24)
@@ -42,8 +43,10 @@ while True:
     a_32 = FPVal(9.80665 * 0.5, Float32)
 
     x_16 = x_0
-    v_16 = fpMul(RNE(), v_0, t)
-    z_16 = fpMul(RNE(), fpMul(RNE(), a_16, t), t)
+    #v_16 = fpMul(RNE(), v_0, t)
+    #z_16 = fpMul(RNE(), fpMul(RNE(), a_16, t), t)
+    v_16 = fp_mul(v_0, t, Float16)
+    z_16 = fp_mul(fp_mul(a_16, t, Float16), t, Float16)
 
     x_32 = fp16_to_fp32(x_0)
     v_32 = fp16_to_fp32(v_0)
@@ -52,17 +55,17 @@ while True:
     v_32_fin = fpMul(RNE(), v_32, t_32)
     z_32_fin = fpMul(RNE(), fpMul(RNE(), a_32, t_32), t_32)
 
-    sum_16 = fpAdd(RNE(), x_16, v_16)
-    sum_16 = fpAdd(RNE(), z_16, sum_16)
-    #sum_16 = manual_fp_sum.fp_sum(x_16, v_16, Float16)
-    #sum_16 = manual_fp_sum.fp_sum(z_16, sum_16, Float16)
+    #sum_16 = fpAdd(RNE(), x_16, v_16)
+    #sum_16 = fpAdd(RNE(), z_16, sum_16)
+    sum_16 = fp_sum(x_16, v_16, Float16)
+    sum_16 = fp_sum(z_16, sum_16, Float16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 
     compare_16 = fp16_to_fp32(sum_16)
 
     s.add(x_0 == 5)
-    s.add(And(t >= 0, t <= 1))
+    s.add(And(t >= 0.99, t <= 1))
     s.add(v_0 == 10)
     s.add(Not(fpIsInf(compare_16)))
     s.add(sum_32 != compare_16)
