@@ -106,6 +106,8 @@ product_size = a_size + b_size
 
 a_exp_adjust = If(a_is_subnormal, get_subnormal_exp_adjust(a_mant), BitVecVal(0, EXP_BITS))
 b_exp_adjust = If(b_is_subnormal, get_subnormal_exp_adjust(b_mant), BitVecVal(0, EXP_BITS))
+a_exp_adjust = ZeroExt(2, a_exp_adjust)
+b_exp_adjust = ZeroExt(2, b_exp_adjust)
 
 extended_exp_bits = EXP_BITS + 2
 
@@ -122,13 +124,13 @@ b_full_mant = If(b_is_subnormal,
                  Concat(BitVecVal(1, 1), b_mant, b_grs))
 
 product_mant = ZeroExt(b_size, a_full_mant) * ZeroExt(a_size, b_full_mant)
-
 # Add exponents (they're already unbiased)
 #product_exp_unbiased = If(a_negative, -a_effective_exp, a_effective_exp) + If(b_negative, -b_effective_exp, b_effective_exp)
 #product_exp_unbiased = If(And(Not(a_negative), Not(b_negative)), product_exp_unbiased - BIAS, product_exp_unbiased)
 #temp_print = product_exp_unbiased
 num_neg_exp = If(And(a_negative, b_negative), 2, If(And(Not(a_negative), Not(b_negative)), 0, 1))
 product_exp_unbiased = a_effective_exp + b_effective_exp
+product_exp_unbiased = If(a_is_subnormal, product_exp_unbiased - a_exp_adjust + 1, If(b_is_subnormal, product_exp_unbiased - b_exp_adjust + 1, product_exp_unbiased))
 #product_exp_unbiased = If(num_neg_exp == 2, product_exp_unbiased - BIAS, If(num_neg_exp == 1, product_exp_unbiased - BIAS, product_exp_unbiased - BIAS))
 test1 = product_exp_unbiased
 product_exp_unbiased = product_exp_unbiased - BIAS
@@ -256,8 +258,8 @@ s.add(ieee_exp != custom_exp)
 s.add(a_grs == 0)
 s.add(b_grs == 0)
 
-s.add(Not(a_is_subnormal))
-s.add(Not(b_is_subnormal))
+#s.add(Not(a_is_subnormal))
+#s.add(Not(b_is_subnormal))
 
 #s.add(ieee_exp != 0)
 
