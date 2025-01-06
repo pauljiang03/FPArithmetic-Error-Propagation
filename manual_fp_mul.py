@@ -168,7 +168,7 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     final_exp_extended = If(mant_overflow == 1,
                             Extract(extended_exp_bits - 1, 0, normalized_exp + 1),
                             normalized_exp)
-    infinity = If(UGT(final_exp_extended, all_ones_zero), True, False)
+    infinity = If(UGE(final_exp_extended, all_ones_zero), True, False)
     final_exp = Extract(EXP_BITS - 1, 0, final_exp_extended)
 
     a_zero = is_zero(a_exp, a_mant, MANT_BITS)
@@ -177,9 +177,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
     a_nan = is_nan(a_exp, a_mant, EXP_BITS)
     b_nan = is_nan(b_exp, b_mant, EXP_BITS)
-    result_exp_inf = BitVecVal(2 ** EXP_BITS - 1, EXP_BITS)
-    result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
-    result_mant_inf = BitVecVal(0, MANT_BITS)
 
     # Handle all special cases
     # TODO: fix hardcoded infinity
@@ -203,4 +200,4 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
                      a_sign,
                      a_sign ^ b_sign)
 
-    return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
+    return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort), [product_exp_unbiased, test2]
