@@ -1,6 +1,7 @@
 from z3 import *
 import time
 from manual_fp_sum import fp_sum
+from flush_to_zero_fp_sum import fp_ftz_sum
 from manual_fp_mul import fp_mul
 
 Float16 = FPSort(5, 11)
@@ -55,10 +56,12 @@ while True:
     v_32_fin = fpMul(RNE(), v_32, t_32)
     z_32_fin = fpMul(RNE(), fpMul(RNE(), a_32, t_32), t_32)
 
-    sum_16 = fpAdd(RNE(), x_16, v_16)
-    sum_16 = fpAdd(RNE(), z_16, sum_16)
+    #sum_16 = fpAdd(RNE(), x_16, v_16)
+    #sum_16 = fpAdd(RNE(), z_16, sum_16)
     #sum_16 = fp_sum(x_16, v_16, Float16)
     #sum_16 = fp_sum(z_16, sum_16, Float16)
+    sum_16 = fp_ftz_sum(x_16, v_16, Float16)
+    sum_16 = fp_ftz_sum(z_16, sum_16, Float16)
     sum_32 = fpAdd(RNE(), x_32, v_32_fin)
     sum_32 = fpAdd(RNE(), z_32_fin, sum_32)
 
