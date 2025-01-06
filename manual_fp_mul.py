@@ -185,12 +185,19 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     # TODO: fix hardcoded infinity
     all_ones_inf = BitVecVal(-1, EXP_BITS)
     final_exp = If(zero, 0, final_exp)
-    final_exp = If(infinity, all_ones_inf, final_exp)
-    final_mant = If(infinity, 0, final_mant)
 
     final_exp = If(Or(a_zero, b_zero), 0, final_exp)
+    final_exp = If(Or(a_inf, b_inf), all_ones_inf, final_exp)
+    final_exp = If(Or(And(a_zero, b_inf), And(b_zero, a_inf)), all_ones_inf, final_exp)
+    final_exp = If(Or(a_nan, b_nan), all_ones_inf, final_exp)
 
     final_mant = If(Or(a_zero, b_zero), 0, final_mant)
+    final_mant = If(Or(a_inf, b_inf), 0, final_mant)
+    final_mant = If(Or(And(a_zero, b_inf), And(b_zero, a_inf)), 1, final_mant)
+    final_mant = If(Or(a_nan, b_nan), 1, final_mant)
+
+    final_exp = If(infinity, all_ones_inf, final_exp)
+    final_mant = If(infinity, 0, final_mant)
 
     final_sign = If(Or(a_nan, b_nan),
                      a_sign,

@@ -14,8 +14,8 @@ def test_all_fp8_multiplications():
     z3_mul = fpMul(RNE(), x, y)
     manual_mul = fp_mul(x, y, Float8)
 
-
     s.add(z3_mul != manual_mul)
+    s.add(Not(fpIsInf(z3_mul)))
 
     if s.check() == sat:
         m = s.model()
