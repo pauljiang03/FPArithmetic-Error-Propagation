@@ -106,16 +106,22 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     test1 = product_exp_unbiased
     product_exp_unbiased = product_exp_unbiased - BIAS
     test2 = product_exp_unbiased
+
+    # TODO: need to un-hardcode the 127
     wrap = 127 - test2 + 1
     wrap = If(UGT(wrap, 24), 0, wrap)
     zero = If(UGT(product_exp_unbiased, 64), True, False)
     product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
+
     # Check normalization needs
     leading_one = Extract(product_size - 1, product_size - 1, product_mant)
     old_product_mant = product_mant
+
+    # TODO: un-hardcode 64
     product_mant = If(UGT(test2, 64),
                       LShR(product_mant, ZeroExt(21, wrap)),
                       product_mant)
+
     # Handle normalization
     normalized_exp = If(leading_one == 1,
                         product_exp_unbiased + 1,
@@ -168,6 +174,8 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     rounded_mant_extended = ZeroExt(1, normalized_mant) + rounding_increment
     mant_overflow = Extract(MANT_BITS, MANT_BITS, rounded_mant_extended)
 
+
+    # TODO: fix hardcoded infinity
     final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
     final_exp_extended = If(mant_overflow == 1,
                             Extract(extended_exp_bits - 1, 0, normalized_exp + 1),
@@ -179,6 +187,7 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     final_sign = a_sign ^ b_sign
 
     # Handle all special cases
+    # TODO: fix hardcoded infinity
     final_exp = If(zero, 0, final_exp)
     final_exp = If(infinity, 31, final_exp)
     final_mant = If(infinity, 0, final_mant)
