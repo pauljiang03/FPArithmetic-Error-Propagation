@@ -3,7 +3,8 @@ from z3 import *
 def is_subnormal(exp, mant, mant_bits):
     return And(exp == 0, Extract(mant_bits - 1, 0, mant) != 0)
 
-
+def is_zero(exp, mant, mant_bits):
+    return And(exp == 0, Extract(mant_bits -1, 0, mant) == 0)
 def normalize_subnormal(mant, is_subnormal, grs_bits, mant_bits, full_mant_bits):
     mant_size = full_mant_bits
     base_mant = Concat(BitVecVal(0, 1), mant, BitVecVal(0, grs_bits))
@@ -15,6 +16,13 @@ def normalize_subnormal(mant, is_subnormal, grs_bits, mant_bits, full_mant_bits)
                    base_mant * curr_shift,
                    result)
     return result
+
+def is_infinity(exp, mant, exp_bits):
+    return And(exp == (2 ** exp_bits - 1), mant == 0)
+
+def is_nan(exp, mant, exp_bits):
+    return And(exp == (2 ** exp_bits - 1), mant != 0)
+
 
 
 def get_subnormal_exp_adjust(mant, exp_bits, mant_bits):
@@ -88,18 +96,24 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     test2 = product_exp_unbiased
 
     # TODO: need to un-hardcode the 127
-    wrap = 127 - test2 + 1
-    wrap = If(UGT(wrap, 24), 0, wrap)
-    zero = If(UGT(product_exp_unbiased, 64), True, False)
-    product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
+    all_ones_wrap = BitVecVal(-1, EXP_BITS + 2)
+    wrap = all_ones_wrap - test2 + 1
+    all_ones_exp = ZeroExt(2, BitVecVal(-1, EXP_BITS))
+    wrap = If(UGT(wrap, all_ones_exp), 0, wrap)
+    all_ones_zero = ZeroExt(1, BitVecVal(-1, EXP_BITS + 1))
+    zero = If(UGT(product_exp_unbiased, all_ones_zero), True, False)
+    product_exp_unbiased = If(UGT(product_exp_unbiased, all_ones_zero), 0, product_exp_unbiased)
 
     # Check normalization needs
     leading_one = Extract(product_size - 1, product_size - 1, product_mant)
     old_product_mant = product_mant
 
     # TODO: un-hardcode 64
-    product_mant = If(UGT(test2, 64),
-                      LShR(product_mant, ZeroExt(21, wrap)),
+    mant_size = product_mant.size()
+    wrap_size = wrap.size()
+    extend_amount = mant_size - wrap_size
+    product_mant = If(UGT(test2, all_ones_zero),
+                      LShR(product_mant, ZeroExt(extend_amount, wrap)),
                       product_mant)
 
     # Handle normalization
@@ -149,21 +163,37 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     rounded_mant_extended = ZeroExt(1, normalized_mant) + rounding_increment
     mant_overflow = Extract(MANT_BITS, MANT_BITS, rounded_mant_extended)
 
-
     # TODO: fix hardcoded infinity
     final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
     final_exp_extended = If(mant_overflow == 1,
                             Extract(extended_exp_bits - 1, 0, normalized_exp + 1),
                             normalized_exp)
-    infinity = If(UGT(final_exp_extended, 31), True, False)
+    infinity = If(UGT(final_exp_extended, all_ones_zero), True, False)
     final_exp = Extract(EXP_BITS - 1, 0, final_exp_extended)
 
-    # Calculate final sign (XOR of input signs)
-    final_sign = a_sign ^ b_sign
+    a_zero = is_zero(a_exp, a_mant, MANT_BITS)
+    b_zero = is_zero(b_exp, b_mant, MANT_BITS)
+    a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
+    b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
+    a_nan = is_nan(a_exp, a_mant, EXP_BITS)
+    b_nan = is_nan(b_exp, b_mant, EXP_BITS)
+    result_exp_inf = BitVecVal(2 ** EXP_BITS - 1, EXP_BITS)
+    result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
+    result_mant_inf = BitVecVal(0, MANT_BITS)
 
     # Handle all special cases
     # TODO: fix hardcoded infinity
+    all_ones_inf = BitVecVal(-1, EXP_BITS)
     final_exp = If(zero, 0, final_exp)
-    final_exp = If(infinity, 31, final_exp)
+    final_exp = If(infinity, all_ones_inf, final_exp)
     final_mant = If(infinity, 0, final_mant)
+
+    final_exp = If(Or(a_zero, b_zero), 0, final_exp)
+
+    final_mant = If(Or(a_zero, b_zero), 0, final_mant)
+
+    final_sign = If(Or(a_nan, b_nan),
+                     a_sign,
+                     a_sign ^ b_sign)
+
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
