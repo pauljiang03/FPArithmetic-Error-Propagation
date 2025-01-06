@@ -1,16 +1,8 @@
 from z3 import *
 
-def is_infinity(exp, mant, exp_bits):
-    return And(exp == (2 ** exp_bits - 1), mant == 0)
-
-def is_nan(exp, mant, exp_bits):
-    return And(exp == (2 ** exp_bits - 1), mant != 0)
-
-def is_zero(exp, mant, mant_bits):
-    return And(exp == 0, Extract(mant_bits - 1, 0, mant) == 0)
-
 def is_subnormal(exp, mant, mant_bits):
     return And(exp == 0, Extract(mant_bits - 1, 0, mant) != 0)
+
 
 def normalize_subnormal(mant, is_subnormal, grs_bits, mant_bits, full_mant_bits):
     mant_size = full_mant_bits
@@ -24,6 +16,7 @@ def normalize_subnormal(mant, is_subnormal, grs_bits, mant_bits, full_mant_bits)
                    result)
     return result
 
+
 def get_subnormal_exp_adjust(mant, exp_bits, mant_bits):
     adjust = BitVecVal(0, exp_bits)
     for i in range(mant_bits):
@@ -33,6 +26,7 @@ def get_subnormal_exp_adjust(mant, exp_bits, mant_bits):
                    adjust)
     return adjust
 
+
 def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     SIGN_BITS = 1
     EXP_BITS = sort.ebits()
@@ -41,9 +35,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     TOTAL_BITS = SIGN_BITS + EXP_BITS + MANT_BITS + GRS_BITS
     BIAS = 2 ** (EXP_BITS - 1) - 1
     FULL_MANT_BITS = 1 + MANT_BITS + GRS_BITS
-    result_exp_inf = BitVecVal(2 ** EXP_BITS - 1, EXP_BITS)
-    result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
-    result_mant_inf = BitVecVal(0, MANT_BITS)
 
     a = Concat(fpToIEEEBV(x), BitVecVal(0, GRS_BITS))
     b = Concat(fpToIEEEBV(y), BitVecVal(0, GRS_BITS))
@@ -58,12 +49,7 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     b_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, b)
     b_grs = Extract(GRS_BITS - 1, 0, b)
 
-    a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
-    b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
-    a_nan = is_nan(a_exp, a_mant, EXP_BITS)
-    b_nan = is_nan(b_exp, b_mant, EXP_BITS)
-    a_zero = is_zero(a_exp, a_mant, MANT_BITS)
-    b_zero = is_zero(b_exp, b_mant, MANT_BITS)
+    # Determine if a and b are subnormal
     a_is_subnormal = is_subnormal(a_exp, a_mant, MANT_BITS)
     b_is_subnormal = is_subnormal(b_exp, b_mant, MANT_BITS)
 
@@ -73,7 +59,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     product_size = a_size + b_size
 
     # Multiply mantissas with proper extension
-
     a_exp_adjust = If(a_is_subnormal, get_subnormal_exp_adjust(a_mant, EXP_BITS, MANT_BITS), BitVecVal(0, EXP_BITS))
     b_exp_adjust = If(b_is_subnormal, get_subnormal_exp_adjust(b_mant, EXP_BITS, MANT_BITS), BitVecVal(0, EXP_BITS))
     a_exp_adjust = ZeroExt(2, a_exp_adjust)
@@ -94,16 +79,11 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
                      Concat(BitVecVal(1, 1), b_mant, b_grs))
 
     product_mant = ZeroExt(b_size, a_full_mant) * ZeroExt(a_size, b_full_mant)
+
     # Add exponents (they're already unbiased)
-    # product_exp_unbiased = If(a_negative, -a_effective_exp, a_effective_exp) + If(b_negative, -b_effective_exp, b_effective_exp)
-    # product_exp_unbiased = If(And(Not(a_negative), Not(b_negative)), product_exp_unbiased - BIAS, product_exp_unbiased)
-    # temp_print = product_exp_unbiased
-    num_neg_exp = If(And(a_negative, b_negative), 2, If(And(Not(a_negative), Not(b_negative)), 0, 1))
     product_exp_unbiased = a_effective_exp + b_effective_exp
     product_exp_unbiased = If(a_is_subnormal, product_exp_unbiased - a_exp_adjust + 1,
                               If(b_is_subnormal, product_exp_unbiased - b_exp_adjust + 1, product_exp_unbiased))
-    # product_exp_unbiased = If(num_neg_exp == 2, product_exp_unbiased - BIAS, If(num_neg_exp == 1, product_exp_unbiased - BIAS, product_exp_unbiased - BIAS))
-    test1 = product_exp_unbiased
     product_exp_unbiased = product_exp_unbiased - BIAS
     test2 = product_exp_unbiased
 
@@ -126,17 +106,12 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     normalized_exp = If(leading_one == 1,
                         product_exp_unbiased + 1,
                         product_exp_unbiased)
-
-    # normalized_mant = If(leading_one == 1,
-    # Extract(product_size-1, product_size-MANT_BITS, product_mant),
-    # Extract(product_size-3, product_size-MANT_BITS-2, product_mant))
     normalized_mant = If(normalized_exp == 0, If(leading_one == 1,
                                                  Extract(product_size - 1, product_size - MANT_BITS, product_mant),
                                                  Extract(product_size - 2, product_size - MANT_BITS - 1, product_mant)),
                          If(leading_one == 1,
                             Extract(product_size - 2, product_size - MANT_BITS - 1, product_mant),
                             Extract(product_size - 3, product_size - MANT_BITS - 2, product_mant)))
-
     normalized_grs = If(normalized_exp == 0, If(leading_one == 1,
                                                 Extract(product_size - MANT_BITS - 1, product_size - MANT_BITS - 3,
                                                         product_mant),
