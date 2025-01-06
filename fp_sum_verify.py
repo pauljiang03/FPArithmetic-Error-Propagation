@@ -13,6 +13,7 @@ def test_all_fp8_additions():
     manual_sum = fp_sum(x, y, Float8)
     s.add(z3_sum != manual_sum)
 
+
     if s.check() == sat:
         m = s.model()
         x_val = m.eval(x)

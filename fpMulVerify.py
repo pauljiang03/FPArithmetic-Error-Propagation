@@ -24,6 +24,9 @@ def test_all_fp8_multiplications():
     manual_mul = fp_mul(x, y, Float8)
 
     s.add(z3_mul != manual_mul[0])
+    #s.add(x == -1.625*(2**5))
+    #s.add(y == 1*(2**6))
+
     #s.add(Not(fpIsInf(z3_mul)))
 
     if s.check() == sat:
