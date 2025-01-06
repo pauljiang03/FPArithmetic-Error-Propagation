@@ -106,11 +106,16 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     test1 = product_exp_unbiased
     product_exp_unbiased = product_exp_unbiased - BIAS
     test2 = product_exp_unbiased
+    wrap = 127 - test2 + 1
+    wrap = If(UGT(wrap, 24), 0, wrap)
     zero = If(UGT(product_exp_unbiased, 64), True, False)
     product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
     # Check normalization needs
     leading_one = Extract(product_size - 1, product_size - 1, product_mant)
-
+    old_product_mant = product_mant
+    product_mant = If(UGT(test2, 64),
+                      LShR(product_mant, ZeroExt(21, wrap)),
+                      product_mant)
     # Handle normalization
     normalized_exp = If(leading_one == 1,
                         product_exp_unbiased + 1,
@@ -139,7 +144,8 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
                                                                                    product_mant)))
 
     # Calculate sticky bit from remaining bits
-    sticky_bits = UGT(Extract(product_size - MANT_BITS - 4, 0, product_mant), 0)
+    sticky_bits = Or(UGT(Extract(product_size - MANT_BITS - 4, 0, old_product_mant), 0),
+                     UGT(Extract(product_size - MANT_BITS - 4, 0, product_mant), 0))
 
     # Extract guard and round bits
     guard_bit = Extract(2, 2, normalized_grs)
@@ -174,7 +180,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
 
     # Handle all special cases
     final_exp = If(zero, 0, final_exp)
-    final_mant = If(zero, 0, final_mant)
     final_exp = If(infinity, 31, final_exp)
     final_mant = If(infinity, 0, final_mant)
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
