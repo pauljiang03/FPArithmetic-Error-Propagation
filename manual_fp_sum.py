@@ -1,10 +1,10 @@
 from z3 import *
 
 def is_infinity(exp, mant, exp_bits):
-    return exp == (2 ** exp_bits - 1) and mant == 0
+    return And(exp == (2 ** exp_bits - 1), mant == 0)
 
 def is_nan(exp, mant, exp_bits):
-    return exp == (2 ** exp_bits - 1) and mant != 0
+    return And(exp == (2 ** exp_bits - 1), mant != 0)
 
 def is_zero(exp, mant):
     return And(exp == 0, mant == 0)
@@ -30,6 +30,9 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     TOTAL_BITS = SIGN_BITS + EXP_BITS + MANT_BITS + GRS_BITS
     FULL_MANT_BITS = 1 + MANT_BITS + GRS_BITS  # Full mantissa including implicit and GRS bits
     EXTENDED_MANT_BITS = FULL_MANT_BITS + 1  # Extended mantissa for intermediate calculations
+    result_exp_inf = BitVecVal(2 ** EXP_BITS - 1, EXP_BITS)
+    result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
+    result_mant_inf = BitVecVal(0, MANT_BITS)
 
     a = Concat(fpToIEEEBV(x), BitVecVal(0, GRS_BITS))
     b = Concat(fpToIEEEBV(y), BitVecVal(0, GRS_BITS))
@@ -43,6 +46,14 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     b_exp = Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, b)
     b_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, b)
     b_grs = Extract(GRS_BITS - 1, 0, b)
+
+    # Check for special cases
+    a_inf = is_infinity(a_exp, a_mant, EXP_BITS)
+    b_inf = is_infinity(b_exp, b_mant, EXP_BITS)
+    a_nan = is_nan(a_exp, a_mant, EXP_BITS)
+    b_nan = is_nan(b_exp, b_mant, EXP_BITS)
+    a_zero = is_zero(a_exp, a_mant)
+    b_zero = is_zero(b_exp, b_mant)
 
     # Determine if is subtraction based on signs
     subtract = a_sign != b_sign
@@ -177,4 +188,21 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
                       a_sign != b_sign)  # Check for exact cancellation
     final_sign = If(a_cancels_b, 0, If(a_larger, a_sign, b_sign))  # Determine result sign
     final_exp = If(a_cancels_b, 0, final_exp)  # Handle cancellation to zero
+
+    # Replace the mantissa and exponent if either a or b is zero
+    final_mant = If(a_zero, b_mant, final_mant)
+    final_exp = If(a_zero, b_exp, final_exp)
+    final_mant = If(b_zero, a_mant, final_mant)
+    final_exp = If(b_zero, a_exp, final_exp)
+
+    # Perform infinity checking
+    final_exp = If(Or(a_inf, b_inf), result_exp_inf, final_exp)
+    final_mant = If(Or(a_inf, b_inf, is_infinity(final_exp, result_mant_inf, EXP_BITS)),
+                    result_mant_inf, final_mant)
+
+    # Perform NaN checking
+    final_mant = If(Or(a_nan, b_nan), result_mant_nan, final_mant)
+    final_exp = If(Or(a_nan, b_nan), result_exp_inf, final_exp)
+    final_mant = If(And(a_inf, b_inf, a_sign != b_sign), result_mant_nan, final_mant) # inf - inf special case
+
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
