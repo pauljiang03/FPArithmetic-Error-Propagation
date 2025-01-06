@@ -135,10 +135,16 @@ product_exp_unbiased = If(a_is_subnormal, product_exp_unbiased - a_exp_adjust + 
 test1 = product_exp_unbiased
 product_exp_unbiased = product_exp_unbiased - BIAS
 test2 = product_exp_unbiased
+wrap = 127 - test2 + 1
+wrap = If(UGT(wrap, 24), 0, wrap)
 zero = If(UGT(product_exp_unbiased, 64), True, False)
 product_exp_unbiased = If(UGT(product_exp_unbiased, 64), 0, product_exp_unbiased)
 # Check normalization needs
 leading_one = Extract(product_size-1, product_size-1, product_mant)
+old_product_mant = product_mant
+product_mant = If(UGT(test2, 64),
+                          LShR(product_mant, ZeroExt(21, wrap)),
+                          product_mant)
 
 # Handle normalization
 normalized_exp = If(leading_one == 1,
@@ -161,7 +167,8 @@ normalized_grs = If(normalized_exp == 0, If(leading_one == 1,
                    Extract(product_size-MANT_BITS-3, product_size-MANT_BITS-5, product_mant)))
 
 # Calculate sticky bit from remaining bits
-sticky_bits = UGT(Extract(product_size-MANT_BITS-4, 0, product_mant), 0)
+sticky_bits = Or(UGT(Extract(product_size-MANT_BITS-4, 0, old_product_mant), 0), UGT(Extract(product_size-MANT_BITS-4, 0, product_mant), 0))
+
 
 # Extract guard and round bits
 guard_bit = Extract(2, 2, normalized_grs)
@@ -182,6 +189,8 @@ rounding_increment = If(round_up,
                        BitVecVal(0, MANT_BITS + 1))
 
 rounded_mant_extended = ZeroExt(1, normalized_mant) + rounding_increment
+intermediate_rounded_mant = rounded_mant_extended
+
 mant_overflow = Extract(MANT_BITS, MANT_BITS, rounded_mant_extended)
 
 final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
@@ -195,7 +204,7 @@ final_sign = a_sign ^ b_sign
 
 # Handle all special cases
 final_exp = If(zero, 0, final_exp)
-final_mant = If(zero, 0, final_mant)
+#final_mant = If(zero, 0, final_mant)
 final_exp = If(infinity, 31, final_exp)
 final_mant = If(infinity, 0, final_mant)
 
@@ -243,6 +252,8 @@ s.add(ieee_result == fpMul(RNE(), a_fp, b_fp))
 ieee_sign = Extract(15, 15, fpToIEEEBV(ieee_result))
 ieee_exp = Extract(14, 10, fpToIEEEBV(ieee_result))
 ieee_mant = Extract(9, 0, fpToIEEEBV(ieee_result))
+
+'''
 s.add(result_mant == If(is_nan(ieee_exp, ieee_mant), If(is_nan(result_exp, result_mant), ieee_mant, result_mant), result_mant))
 s.add(result_sign == If(is_nan(ieee_exp, ieee_mant), If(is_nan(result_exp, result_mant), ieee_sign, result_sign), result_sign))
 
@@ -261,12 +272,14 @@ s.add(
         ),
         result_mant == ieee_mant  # If not max exp, match IEEE
     )
-)
+)'''
 
 custom_exp = Extract(14, 10, custom_result)
 
 
 s.add(fpToIEEEBV(ieee_result) != custom_result)
+#s.add(fpToIEEEBV(ieee_result) == custom_result)
+
 # Add constraint that they must be different
 #s.add(ieee_exp != custom_exp)
 #s.add(ieee_exp != custom_exp + 1)
@@ -280,8 +293,8 @@ s.add(a_grs == 0)
 s.add(b_grs == 0)
 
 
-s.add(Not(a_is_subnormal))
-s.add(Not(b_is_subnormal))
+#s.add(Not(a_is_subnormal))
+#s.add(Not(b_is_subnormal))
 
 
 #s.add(Not(is_nan(a_exp, a_mant)))
@@ -289,30 +302,30 @@ s.add(Not(b_is_subnormal))
 #s.add(Not(is_nan(ieee_exp, ieee_mant)))
 #s.add(Not(is_subnormal(ieee_exp, ieee_mant)))
 
-s.add(ieee_exp != 0)
-#s.add(ieee_exp != 31)
+#s.add(ieee_exp != 0)
+s.add(ieee_exp != 31)
 
 '''
 s.add(a_sign == BitVecVal(0, SIGN_BITS))
-s.add(a_exp == BitVecVal(1, EXP_BITS))
-s.add(a_mant == BitVecVal(int('0010110010', 2), MANT_BITS))
+s.add(a_exp == BitVecVal(5, EXP_BITS))
+s.add(a_mant == BitVecVal(int('0001000010', 2), MANT_BITS))
 s.add(a_grs == BitVecVal(0, GRS_BITS))
 
 s.add(b_sign == BitVecVal(0, SIGN_BITS))
-s.add(b_exp == BitVecVal(2, EXP_BITS))
-s.add(b_mant == BitVecVal(int('1011011011', 2), MANT_BITS))
+s.add(b_exp == BitVecVal(0, EXP_BITS))
+s.add(b_mant == BitVecVal(int('0111100001', 2), MANT_BITS))
 s.add(b_grs == BitVecVal(0, GRS_BITS))
 '''
 
 '''
 s.add(a_sign == BitVecVal(1, SIGN_BITS))
-s.add(a_exp == BitVecVal(8, EXP_BITS))
-s.add(a_mant == BitVecVal(int('0000110010', 2), MANT_BITS))
+s.add(a_exp == BitVecVal(3, EXP_BITS))
+s.add(a_mant == BitVecVal(int('1001101010', 2), MANT_BITS))
 s.add(a_grs == BitVecVal(0, GRS_BITS))
 
-s.add(b_sign == BitVecVal(0, SIGN_BITS))
-s.add(b_exp == BitVecVal(7, EXP_BITS))
-s.add(b_mant == BitVecVal(int('1110100000', 2), MANT_BITS))
+s.add(b_sign == BitVecVal(1, SIGN_BITS))
+s.add(b_exp == BitVecVal(4, EXP_BITS))
+s.add(b_mant == BitVecVal(int('1110001011', 2), MANT_BITS))
 s.add(b_grs == BitVecVal(0, GRS_BITS))
 '''
 
@@ -334,6 +347,8 @@ if s.check() == sat:
     print("b is NaN:", m.eval(b_nan))
     print("a is zero:", m.eval(a_zero))
     print("b is zero:", m.eval(b_zero))
+    print("a exp adj:", m.eval(a_exp_adjust))
+    print("b exp adj:", m.eval(b_exp_adjust))
 
     print("\nIntermediate values:")
     print("a_is_subnormal =", m.eval(a_is_subnormal))
@@ -343,6 +358,8 @@ if s.check() == sat:
     print("zero =", m.eval(zero))
     print("test1 =", m.eval(test1))
     print("test2 =", m.eval(test2))
+    print("wrap =", m.eval(wrap))
+
 
 
 
@@ -355,6 +372,7 @@ if s.check() == sat:
     print("b_full_mant =", bv_to_binary(m.eval(b_full_mant), FULL_MANT_BITS))
 
     print("\nProduct intermediate:")
+    print("old prod mant =", bv_to_binary(m.eval(old_product_mant), product_size))
     print("product_mant =", bv_to_binary(m.eval(product_mant), product_size))
     print("product_exp_unbias =", m.eval(product_exp_unbiased))
     print("leading_one =", m.eval(leading_one))
@@ -371,6 +389,7 @@ if s.check() == sat:
     print("guard_bit =", m.eval(guard_bit))
     print("round_bit =", m.eval(round_bit))
     print("round_up =", m.eval(round_up))
+    print("rounded intermediate mant:", bv_to_binary(m.eval(intermediate_rounded_mant),  MANT_BITS + 1))
     print("rounded_mant_extended =", bv_to_binary(m.eval(rounded_mant_extended), MANT_BITS + 1))
     print("mant_overflow =", m.eval(mant_overflow))
     print("fin_exp_ext =", bv_to_binary(m.eval(final_exp_extended), 7))
