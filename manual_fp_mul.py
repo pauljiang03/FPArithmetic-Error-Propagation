@@ -146,11 +146,12 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     sticky_bit = If(sticky_bits, BitVecVal(1, 1), BitVecVal(0, 1))
 
     # Determine if rounding up is needed (round to nearest even)
-    round_up = And(guard_bit == BitVecVal(1, 1),
-                   Or(sticky_bit == BitVecVal(1, 1),
-                      round_bit == BitVecVal(1, 1),
-                      Extract(0, 0, normalized_mant) == BitVecVal(1, 1)))
-
+    #round_up = And(guard_bit == BitVecVal(1, 1),
+                   #Or(sticky_bit == BitVecVal(1, 1),
+                      #round_bit == BitVecVal(1, 1),
+                      #Extract(0, 0, normalized_mant) == BitVecVal(1, 1)))
+    #if only 1 extra bit for RNE()
+    round_up = guard_bit == 1
     # Apply rounding
     rounding_increment = If(round_up,
                             BitVecVal(1, MANT_BITS + 1),

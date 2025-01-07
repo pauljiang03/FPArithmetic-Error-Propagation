@@ -173,6 +173,8 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
 
     # Determine if rounding up is needed (round to nearest even)
     round_up = And(guard_bit == 1, Or(sticky_bit == 1, round_bit == 1, Extract(0, 0, normalized_mant) == 1))
+    #only 1 extra bit, round up if G bit is 1, round down otherwise
+    #round_up = guard_bit == 1
     rounding_increment = If(round_up, BitVecVal(1, MANT_BITS + 1), BitVecVal(0, MANT_BITS + 1))
 
     # Apply rounding
@@ -204,5 +206,10 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     final_mant = If(Or(a_nan, b_nan), result_mant_nan, final_mant)
     final_exp = If(Or(a_nan, b_nan), result_exp_inf, final_exp)
     final_mant = If(And(a_inf, b_inf, a_sign != b_sign), result_mant_nan, final_mant) # inf - inf special case
+
+    #Flush to zero toggle
+    #is_subnormal_result = And(final_exp == 0, final_mant != 0)
+    #final_exp = If(is_subnormal_result, 0, final_exp)
+    #final_mant = If(is_subnormal_result, 0, final_mant)
 
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
