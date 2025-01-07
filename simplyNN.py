@@ -38,12 +38,12 @@ def compare_fp8_implementations():
     y_custom = fp_sum(sum2_custom, b, FP8)
 
     # Compute using Z3's built-in operations
-    prod1_z3 = x1 * w1
-    prod2_z3 = x2 * w2
-    prod3_z3 = x3 * w3
-    sum1_z3 = prod1_z3 + prod2_z3
-    sum2_z3 = sum1_z3 + prod3_z3
-    y_z3 = sum2_z3 + b
+    prod1_z3 = fpMul(RTZ(), x1, w1)
+    prod2_z3 = fpMul(RTZ(), x2, w2)
+    prod3_z3 = fpMul(RTZ(), x3, w3)
+    sum1_z3 = fpAdd(RTZ(), prod1_z3, prod2_z3)
+    sum2_z3 = fpAdd(RTZ(), sum1_z3, prod3_z3)
+    y_z3 = fpAdd(RTZ(), sum2_z3, b)
 
     # Add constraints on output range
     solver.add(fpGT(y_custom, FPVal(0.0, FP8)))
