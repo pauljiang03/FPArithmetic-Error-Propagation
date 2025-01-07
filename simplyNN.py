@@ -3,53 +3,55 @@ from manual_fp_mul import fp_mul
 from manual_fp_sum import fp_sum
 import time
 
-
 def bv_to_binary(bv, width):
     return format(bv.as_long(), f'0{width}b')
 
+
 FP8 = FPSort(4, 4)
+
 
 def compare_fp8_implementations():
     start = time.time()
     solver = Solver()
 
-    # Input vector
     x1 = FP('x1', FP8)
     x2 = FP('x2', FP8)
     x3 = FP('x3', FP8)
+    x4 = FP('x4', FP8)
 
-    # Weights
     w1 = FP('w1', FP8)
     w2 = FP('w2', FP8)
     w3 = FP('w3', FP8)
+    w4 = FP('w4', FP8)
     b = FP('b', FP8)
 
-    # Constrain all values to small range [-1, 1]
-    for var in [x1, x2, x3, w1, w2, w3, b]:
+    for var in [x1, x2, x3, x4, w1, w2, w3, w4, b]:
         solver.add(fpLEQ(var, FPVal(1.0, FP8)))
         solver.add(fpGEQ(var, FPVal(-1.0, FP8)))
 
-    # Compute using custom FP8 operations
     prod1_custom = fp_mul(x1, w1, FP8)
     prod2_custom = fp_mul(x2, w2, FP8)
     prod3_custom = fp_mul(x3, w3, FP8)
+    prod4_custom = fp_mul(x4, w4, FP8)
+
     sum1_custom = fp_sum(prod1_custom, prod2_custom, FP8)
     sum2_custom = fp_sum(sum1_custom, prod3_custom, FP8)
-    y_custom = fp_sum(sum2_custom, b, FP8)
+    sum3_custom = fp_sum(sum2_custom, prod4_custom, FP8)
+    y_custom = fp_sum(sum3_custom, b, FP8)
 
-    # Compute using Z3's built-in operations
     prod1_z3 = fpMul(RTZ(), x1, w1)
     prod2_z3 = fpMul(RTZ(), x2, w2)
     prod3_z3 = fpMul(RTZ(), x3, w3)
+    prod4_z3 = fpMul(RTZ(), x4, w4)
+
     sum1_z3 = fpAdd(RTZ(), prod1_z3, prod2_z3)
     sum2_z3 = fpAdd(RTZ(), sum1_z3, prod3_z3)
-    y_z3 = fpAdd(RTZ(), sum2_z3, b)
+    sum3_z3 = fpAdd(RTZ(), sum2_z3, prod4_z3)
+    y_z3 = fpAdd(RTZ(), sum3_z3, b)
 
-    # Add constraints on output range
     solver.add(fpGT(y_custom, FPVal(0.0, FP8)))
     solver.add(fpLT(y_custom, FPVal(4.0, FP8)))
 
-    # Look for cases where custom implementation differs from Z3
     solver.add(Not(fpEQ(y_custom, y_z3)))
 
     if solver.check() == sat:
@@ -59,9 +61,11 @@ def compare_fp8_implementations():
         print(f"x1 = {m.eval(x1)}")
         print(f"x2 = {m.eval(x2)}")
         print(f"x3 = {m.eval(x3)}")
+        print(f"x4 = {m.eval(x4)}")
         print(f"w1 = {m.eval(w1)}")
         print(f"w2 = {m.eval(w2)}")
         print(f"w3 = {m.eval(w3)}")
+        print(f"w4 = {m.eval(w4)}")
         print(f"b = {m.eval(b)}")
 
         print("\nResults:")
@@ -70,6 +74,4 @@ def compare_fp8_implementations():
 
         print(f"Time: {time.time() - start}")
 
-
 compare_fp8_implementations()
-
