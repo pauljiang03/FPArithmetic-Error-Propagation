@@ -74,8 +74,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
 
     extended_exp_bits = EXP_BITS + 2
 
-    a_negative = ULT(a_exp, BitVecVal(BIAS, EXP_BITS))
-    b_negative = ULT(b_exp, BitVecVal(BIAS, EXP_BITS))
     a_effective_exp = ZeroExt(2, a_exp)
     b_effective_exp = ZeroExt(2, b_exp)
 
@@ -95,7 +93,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     product_exp_unbiased = product_exp_unbiased - BIAS
     test2 = product_exp_unbiased
 
-    # TODO: need to un-hardcode the 127
     all_ones_wrap = BitVecVal(-1, EXP_BITS + 2)
     wrap = all_ones_wrap - test2 + 1
     all_ones_exp = ZeroExt(2, BitVecVal(-1, EXP_BITS))
@@ -108,7 +105,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     leading_one = Extract(product_size - 1, product_size - 1, product_mant)
     old_product_mant = product_mant
 
-    # TODO: un-hardcode 64
     mant_size = product_mant.size()
     wrap_size = wrap.size()
     extend_amount = mant_size - wrap_size
@@ -163,7 +159,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     rounded_mant_extended = ZeroExt(1, normalized_mant) + rounding_increment
     mant_overflow = Extract(MANT_BITS, MANT_BITS, rounded_mant_extended)
 
-    # TODO: fix hardcoded infinity
     final_mant = Extract(MANT_BITS - 1, 0, rounded_mant_extended)
     final_exp_extended = If(mant_overflow == 1,
                             Extract(extended_exp_bits - 1, 0, normalized_exp + 1),
@@ -179,7 +174,6 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     b_nan = is_nan(b_exp, b_mant, EXP_BITS)
 
     # Handle all special cases
-    # TODO: fix hardcoded infinity
     all_ones_inf = BitVecVal(-1, EXP_BITS)
     final_exp = If(zero, 0, final_exp)
     final_exp = If(infinity, all_ones_inf, final_exp)
