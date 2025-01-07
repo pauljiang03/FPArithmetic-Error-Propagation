@@ -199,4 +199,4 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
                      a_sign,
                      a_sign ^ b_sign)
 
-    return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort), [final_exp_extended, all_ones_zero]
+    return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)
