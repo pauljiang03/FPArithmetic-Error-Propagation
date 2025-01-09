@@ -15,7 +15,7 @@ def parse_z3_fp(fp_str):
     return float(fp_str)
 
 
-FP8 = FPSort(4, 4)
+FP8 = FPSort(5, 11)
 
 
 def compare_fp8_implementations(min_diff_percentage):
@@ -34,8 +34,8 @@ def compare_fp8_implementations(min_diff_percentage):
     b = FP('b', FP8)
 
     for var in [x1, x2, x3, x4, w1, w2, w3, w4, b]:
-        solver.add(fpLEQ(var, FPVal(1.0, FP8)))
-        solver.add(fpGEQ(var, FPVal(-1.0, FP8)))
+        solver.add(fpLEQ(var, FPVal(2.0, FP8)))
+        solver.add(fpGEQ(var, FPVal(-2.0, FP8)))
 
     all_vars = [x1, x2, x3, x4, w1, w2, w3, w4, b]
     for i in range(len(all_vars)):
@@ -63,7 +63,7 @@ def compare_fp8_implementations(min_diff_percentage):
     y_z3 = fpAdd(RNE(), sum3_z3, b)
 
     solver.add(fpGT(y_custom, FPVal(0.0, FP8)))
-    solver.add(fpLT(y_custom, FPVal(4.0, FP8)))
+    solver.add(fpLT(y_custom, FPVal(8.0, FP8)))
 
     solver.add(Not(fpEQ(y_custom, y_z3)))
 
@@ -110,4 +110,4 @@ def compare_fp8_implementations(min_diff_percentage):
 
         print(f"\nTime: {time.time() - start}")
 
-compare_fp8_implementations(60)
+compare_fp8_implementations(20)

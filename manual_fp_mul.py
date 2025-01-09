@@ -153,6 +153,8 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     #if only 1 extra bit for RNE()
     round_up = guard_bit == 1
     # Apply rounding
+    #round_up = False
+
     rounding_increment = If(round_up,
                             BitVecVal(1, MANT_BITS + 1),
                             BitVecVal(0, MANT_BITS + 1))
