@@ -19,7 +19,7 @@ def format_decimal(val):
     return val
 
 
-def maximize_horner_error(degree=3, max_attempts=20):
+def maximize_horner_error(degree, max_attempts=20):
     start = time.time()
     solver = Solver()
     FP16 = FPSort(4, 4)
@@ -30,16 +30,16 @@ def maximize_horner_error(degree=3, max_attempts=20):
 
     # Add range constraints
     for var in [x] + coeffs:
-        solver.add(fpLEQ(var, FPVal(2.0, FP16)))
-        solver.add(fpGEQ(var, FPVal(0.1, FP16)))
+        solver.add(fpGEQ(var, FPVal(-1.0, FP16)))
+        solver.add(fpLEQ(var, FPVal(1.0, FP16)))
         solver.add(Not(fpIsNaN(var)))
         solver.add(Not(fpIsInf(var)))
 
     # Make all variables different
-    all_vars = [x] + coeffs
+    '''all_vars = [x] + coeffs
     for i in range(len(all_vars)):
         for j in range(i + 1, len(all_vars)):
-            solver.add(Not(fpEQ(all_vars[i], all_vars[j])))
+            solver.add(Not(fpEQ(all_vars[i], all_vars[j])))'''
 
     # Compute custom implementation with tracking
     def compute_custom():
@@ -71,8 +71,7 @@ def maximize_horner_error(degree=3, max_attempts=20):
     result_z3, z3_steps = compute_z3()
 
     # Add constraints for meaningful results
-    solver.add(fpGT(fpAbs(result_custom), FPVal(0.1, FP16)))
-    solver.add(fpLT(fpAbs(result_custom), FPVal(8.0, FP16)))
+    #solver.add(fpLEQ(fpAbs(result_custom), FPVal(degree + 1, FP16)))
     solver.add(Not(fpIsNaN(result_custom)))
     solver.add(Not(fpIsInf(result_custom)))
     solver.add(Not(fpIsNaN(result_z3)))
@@ -125,7 +124,7 @@ def maximize_horner_error(degree=3, max_attempts=20):
             custom_final = format_decimal(str(m.eval(result_custom)))
             z3_final = format_decimal(str(m.eval(result_z3)))
             abs_error = abs(custom_final - z3_final)
-            error_percentage = (abs_error / abs(running_sum)) * 100
+            error_percentage = 0 if running_sum == 0 else (abs_error / abs(running_sum)) * 100
 
             print(f"\nResults:")
             print(f"Custom final: {custom_final}")
@@ -152,5 +151,5 @@ def maximize_horner_error(degree=3, max_attempts=20):
 
 
 if __name__ == "__main__":
-    maximize_horner_error(degree=3)
+    maximize_horner_error(2)
 
