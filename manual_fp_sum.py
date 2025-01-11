@@ -210,8 +210,8 @@ def fp_sum(x: FPRef, y: FPRef, sort: FPSortRef):
     final_mant = If(And(a_inf, b_inf, a_sign != b_sign), result_mant_nan, final_mant) # inf - inf special case
 
     #Flush to zero toggle
-    is_subnormal_result = And(final_exp == 0, final_mant != 0)
-    final_exp = If(is_subnormal_result, 0, final_exp)
-    final_mant = If(is_subnormal_result, 0, final_mant)
+    #s_subnormal_result = And(final_exp == 0, final_mant != 0)
+    #final_exp = If(is_subnormal_result, 0, final_exp)
+    #final_mant = If(is_subnormal_result, 0, final_mant)
 
     return fpBVToFP(Concat(final_sign, final_exp, final_mant), sort)

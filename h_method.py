@@ -30,8 +30,8 @@ def maximize_horner_error(degree, max_attempts=20):
 
     # Add range constraints
     for var in [x] + coeffs:
-        solver.add(fpGEQ(var, FPVal(-1.0, FP16)))
-        solver.add(fpLEQ(var, FPVal(1.0, FP16)))
+        solver.add(fpGEQ(var, FPVal(0, FP16)))
+        solver.add(fpLEQ(var, FPVal(3.0, FP16)))
         solver.add(Not(fpIsNaN(var)))
         solver.add(Not(fpIsInf(var)))
 
@@ -151,5 +151,5 @@ def maximize_horner_error(degree, max_attempts=20):
 
 
 if __name__ == "__main__":
-    maximize_horner_error(2)
+    maximize_horner_error(5)
 
