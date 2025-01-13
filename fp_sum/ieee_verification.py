@@ -1,5 +1,5 @@
 from z3 import *
-from manual_fp_sum import fp_sum
+from fp_sum.ieee_compliant import fp_sum
 Float8 = FPSort(4, 4)
 
 # Compare and verify the manual IEEE fp add against the library fp add

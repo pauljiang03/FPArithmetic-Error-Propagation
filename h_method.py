@@ -1,6 +1,6 @@
 from z3 import *
-from manual_fp_mul import fp_mul
-from manual_fp_sum import fp_sum
+from fp_mul.ieee_compliant import fp_mul
+from fp_sum.ieee_compliant import fp_sum
 import time
 
 
@@ -151,5 +151,5 @@ def maximize_horner_error(degree, max_attempts=20):
 
 
 if __name__ == "__main__":
-    maximize_horner_error(5)
+    maximize_horner_error(2)
 

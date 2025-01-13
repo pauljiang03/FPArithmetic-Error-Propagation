@@ -1,39 +1,4 @@
-from z3 import *
-
-def is_subnormal(exp, mant, mant_bits):
-    return And(exp == 0, Extract(mant_bits - 1, 0, mant) != 0)
-
-def is_zero(exp, mant, mant_bits):
-    return And(exp == 0, Extract(mant_bits -1, 0, mant) == 0)
-def normalize_subnormal(mant, is_subnormal, grs_bits, mant_bits, full_mant_bits):
-    mant_size = full_mant_bits
-    base_mant = Concat(BitVecVal(0, 1), mant, BitVecVal(0, grs_bits))
-    result = base_mant
-    for i in range(1, mant_bits + 1):
-        bit = Extract(mant_bits - i, mant_bits - i, mant)
-        curr_shift = BitVecVal(2**i, mant_size)
-        result = If(And(is_subnormal, bit == 1, result == base_mant),
-                   base_mant * curr_shift,
-                   result)
-    return result
-
-def is_infinity(exp, mant, exp_bits):
-    return And(exp == (2 ** exp_bits - 1), mant == 0)
-
-def is_nan(exp, mant, exp_bits):
-    return And(exp == (2 ** exp_bits - 1), mant != 0)
-
-
-
-def get_subnormal_exp_adjust(mant, exp_bits, mant_bits):
-    adjust = BitVecVal(0, exp_bits)
-    for i in range(mant_bits):
-        bit = Extract(mant_bits - 1 - i, mant_bits - 1 - i, mant)
-        adjust = If(And(bit == 1, adjust == 0),
-                   BitVecVal(i+1, exp_bits),
-                   adjust)
-    return adjust
-
+from .helpers import *
 
 def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     SIGN_BITS = 1
@@ -47,15 +12,9 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     a = Concat(fpToIEEEBV(x), BitVecVal(0, GRS_BITS))
     b = Concat(fpToIEEEBV(y), BitVecVal(0, GRS_BITS))
 
-    # Split inputs and result into components (sign, exponent, mantissa, GRS bits)
-    a_sign = Extract(TOTAL_BITS - 1, TOTAL_BITS - SIGN_BITS, a)
-    a_exp = Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, a)
-    a_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, a)
-    a_grs = Extract(GRS_BITS - 1, 0, a)
-    b_sign = Extract(TOTAL_BITS - 1, TOTAL_BITS - SIGN_BITS, b)
-    b_exp = Extract(TOTAL_BITS - SIGN_BITS - 1, TOTAL_BITS - SIGN_BITS - EXP_BITS, b)
-    b_mant = Extract(TOTAL_BITS - SIGN_BITS - EXP_BITS - 1, GRS_BITS, b)
-    b_grs = Extract(GRS_BITS - 1, 0, b)
+    # Split inputs into components (sign, exponent, mantissa, GRS bits)
+    a_sign, a_exp, a_mant, a_grs = split_input(a, TOTAL_BITS, SIGN_BITS, EXP_BITS, GRS_BITS)
+    b_sign, b_exp, b_mant, b_grs = split_input(b, TOTAL_BITS, SIGN_BITS, EXP_BITS, GRS_BITS)
 
     # Determine if a and b are subnormal
     a_is_subnormal = is_subnormal(a_exp, a_mant, MANT_BITS)
@@ -146,12 +105,12 @@ def fp_mul(x: FPRef, y: FPRef, sort: FPSortRef):
     sticky_bit = If(sticky_bits, BitVecVal(1, 1), BitVecVal(0, 1))
 
     # Determine if rounding up is needed (round to nearest even)
-    #round_up = And(guard_bit == BitVecVal(1, 1),
-                   #Or(sticky_bit == BitVecVal(1, 1),
-                      #round_bit == BitVecVal(1, 1),
-                      #Extract(0, 0, normalized_mant) == BitVecVal(1, 1)))
+    round_up = And(guard_bit == BitVecVal(1, 1),
+                   Or(sticky_bit == BitVecVal(1, 1),
+                      round_bit == BitVecVal(1, 1),
+                      Extract(0, 0, normalized_mant) == BitVecVal(1, 1)))
     #if only 1 extra bit for RNE()
-    round_up = guard_bit == 1
+    #round_up = guard_bit == 1
     # Apply rounding
     #round_up = False
 

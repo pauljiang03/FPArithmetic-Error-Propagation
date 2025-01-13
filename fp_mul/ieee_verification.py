@@ -1,8 +1,8 @@
 from z3 import *
-from manual_fp_mul import fp_mul
+from fp_mul.ieee_compliant import fp_mul
 
 # TODO: Does not work with under 4 exponent bits (subnormal handling issue)
-Float8 = FPSort(3, 5)
+Float8 = FPSort(4, 4)
 
 def bv_to_binary_str(bv):
     return bin(bv.as_long())[2:].zfill(bv.size())
