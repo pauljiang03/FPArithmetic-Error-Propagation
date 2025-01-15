@@ -1,8 +1,6 @@
 from z3 import *
 import time
-from manual_fp_sum import fp_sum
-from flush_to_zero_fp_sum import fp_ftz_sum
-from manual_fp_mul import fp_mul
+from fp_sum.ftz import fp_ftz_sum
 
 Float16 = FPSort(5, 11)
 Float32 = FPSort(8, 24)
@@ -68,7 +66,7 @@ while True:
     compare_16 = fp16_to_fp32(sum_16)
 
     s.add(x_0 == 5)
-    s.add(And(t >= 0, t <= 0.1))
+    s.add(And(t >= 0.5, t <= 0.50001))
     s.add(v_0 == 10)
     s.add(Not(fpIsInf(compare_16)))
     s.add(sum_32 != compare_16)

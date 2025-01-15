@@ -1,7 +1,5 @@
 from z3 import *
 import time
-from manual_fp_mul import fp_mul
-from manual_fp_sum import fp_sum
 
 FP16 = FPSort(5, 11)
 FP8 = FPSort(4, 4)  # e4m3 format
