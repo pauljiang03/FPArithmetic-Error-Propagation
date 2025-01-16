@@ -22,16 +22,16 @@ def format_decimal(val):
 def maximize_horner_error(degree, max_attempts=20):
     start = time.time()
     solver = Solver()
-    FP16 = FPSort(4, 4)
+    FP8 = FPSort(4, 4)
 
     # Create variables
-    x = FP('x', FP16)
-    coeffs = [FP(f'a{i}', FP16) for i in range(degree + 1)]
+    x = FP('x', FP8)
+    coeffs = [FP(f'a{i}', FP8) for i in range(degree + 1)]
 
     # Add range constraints
     for var in [x] + coeffs:
-        solver.add(fpGEQ(var, FPVal(0, FP16)))
-        solver.add(fpLEQ(var, FPVal(3.0, FP16)))
+        solver.add(fpGEQ(var, FPVal(0, FP8)))
+        solver.add(fpLEQ(var, FPVal(0.1, FP8)))
         solver.add(Not(fpIsNaN(var)))
         solver.add(Not(fpIsInf(var)))
 
@@ -48,9 +48,9 @@ def maximize_horner_error(degree, max_attempts=20):
         steps.append(("init", result))
 
         for i, coeff in enumerate(coeffs[1:], 1):
-            mul = fp_mul(result, x, FP16)
+            mul = fp_mul(result, x, FP8)
             steps.append((f"mul{i}", mul))
-            result = fp_sum(mul, coeff, FP16)
+            result = fp_sum(mul, coeff, FP8)
             steps.append((f"add{i}", result))
         return result, steps
 
@@ -80,7 +80,7 @@ def maximize_horner_error(degree, max_attempts=20):
     # Calculate difference
     diff = fpSub(RNE(), result_custom, result_z3)
     abs_diff = fpAbs(diff)
-    solver.add(fpGT(abs_diff, FPVal(0.0, FP16)))
+    solver.add(fpGT(abs_diff, FPVal(0.0, FP8)))
 
     # Incrementally find larger errors
     max_error = None
