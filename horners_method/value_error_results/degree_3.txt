@@ -1,0 +1,355 @@
+
+Attempt 1: Found larger error
+
+Inputs:
+x = 0.25*(2**-6) (0.00390625)
+a0 = -1*(2**1) (-2.0)
+a1 = 1.125*(2**1) (2.25)
+a2 = -1.125*(2**1) (-2.25)
+a3 = 1.25*(2**-6) (0.01953125)
+
+Step by step computation:
+
+Custom implementation:
+init: -1*(2**1) (-2.0)
+mul1: -0.5*(2**-6) (-0.0078125)
+add1: 1.125*(2**1) (2.25)
+mul2: 0.625*(2**-6) (0.009765625)
+add2: -1.125*(2**1) (-2.25)
+mul3: -0.625*(2**-6) (-0.009765625)
+add3: 0.625*(2**-6) (0.009765625)
+
+Z3 implementation:
+init: -1*(2**1) (-2.0)
+mul1: -0.5*(2**-6) (-0.0078125)
+add1: 1.125*(2**1) (2.25)
+mul2: 0.5*(2**-6) (0.0078125)
+add2: -1.125*(2**1) (-2.25)
+mul3: -0.5*(2**-6) (-0.0078125)
+add3: 0.75*(2**-6) (0.01171875)
+
+Results:
+Custom final: 0.009765625
+Z3 final: 0.01171875
+Absolute error: 0.001953125
+Error percentage of final sum: 20.00%
+
+Attempt 2: Found larger error
+
+Inputs:
+x = 1*(2**-4) (0.0625)
+a0 = +0.0 (0.0)
+a1 = -0.25*(2**-6) (-0.00390625)
+a2 = 1.25*(2**-6) (0.01953125)
+a3 = 1*(2**-5) (0.03125)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+mul1: +0.0 (0.0)
+add1: -0.25*(2**-6) (-0.00390625)
+mul2: -0.0 (-0.0)
+add2: 1.25*(2**-6) (0.01953125)
+mul3: 0.125*(2**-6) (0.001953125)
+add3: 1.125*(2**-5) (0.03515625)
+
+Z3 implementation:
+init: +0.0 (0.0)
+mul1: +0.0 (0.0)
+add1: -0.25*(2**-6) (-0.00390625)
+mul2: -0.0 (-0.0)
+add2: 1.25*(2**-6) (0.01953125)
+mul3: 0.125*(2**-6) (0.001953125)
+add3: 1*(2**-5) (0.03125)
+
+Results:
+Custom final: 0.03515625
+Z3 final: 0.03125
+Absolute error: 0.00390625
+Error percentage of final sum: 11.11%
+
+Attempt 3: Found larger error
+
+Inputs:
+x = 1.75*(2**-2) (0.4375)
+a0 = 1.25*(2**2) (5.0)
+a1 = +0.0 (0.0)
+a2 = 1*(2**-4) (0.0625)
+a3 = -1.875*(2**-3) (-0.234375)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.25*(2**2) (5.0)
+mul1: 1.125*(2**1) (2.25)
+add1: 1.125*(2**1) (2.25)
+mul2: 1 (1.0)
+add2: 1.125 (1.125)
+mul3: 1*(2**-1) (0.5)
+add3: 1.125*(2**-2) (0.28125)
+
+Z3 implementation:
+init: 1.25*(2**2) (5.0)
+mul1: 1.125*(2**1) (2.25)
+add1: 1.125*(2**1) (2.25)
+mul2: 1 (1.0)
+add2: 1 (1.0)
+mul3: 1.75*(2**-2) (0.4375)
+add3: 1.625*(2**-3) (0.203125)
+
+Results:
+Custom final: 0.28125
+Z3 final: 0.203125
+Absolute error: 0.078125
+Error percentage of final sum: 27.78%
+
+Attempt 4: Found larger error
+
+Inputs:
+x = 1*(2**-2) (0.25)
+a0 = 1.75*(2**-2) (0.4375)
+a1 = -1*(2**-2) (-0.25)
+a2 = 1.75 (1.75)
+a3 = 1.125 (1.125)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.75*(2**-2) (0.4375)
+mul1: 1.75*(2**-4) (0.109375)
+add1: -1.125*(2**-3) (-0.140625)
+mul2: -1.125*(2**-5) (-0.03515625)
+add2: 1.75 (1.75)
+mul3: 1.75*(2**-2) (0.4375)
+add3: 1.625 (1.625)
+
+Z3 implementation:
+init: 1.75*(2**-2) (0.4375)
+mul1: 1.75*(2**-4) (0.109375)
+add1: -1.125*(2**-3) (-0.140625)
+mul2: -1.125*(2**-5) (-0.03515625)
+add2: 1.75 (1.75)
+mul3: 1.75*(2**-2) (0.4375)
+add3: 1.5 (1.5)
+
+Results:
+Custom final: 1.625
+Z3 final: 1.5
+Absolute error: 0.125
+Error percentage of final sum: 7.69%
+
+Attempt 5: Found larger error
+
+Inputs:
+x = 1.75*(2**-2) (0.4375)
+a0 = -1*(2**2) (-4.0)
+a1 = -1.125*(2**-1) (-0.5625)
+a2 = 1.625*(2**1) (3.25)
+a3 = 1.625*(2**1) (3.25)
+
+Step by step computation:
+
+Custom implementation:
+init: -1*(2**2) (-4.0)
+mul1: -1.75 (-1.75)
+add1: -1.125*(2**1) (-2.25)
+mul2: -1 (-1.0)
+add2: 1.125*(2**1) (2.25)
+mul3: 1 (1.0)
+add3: 1.125*(2**2) (4.5)
+
+Z3 implementation:
+init: -1*(2**2) (-4.0)
+mul1: -1.75 (-1.75)
+add1: -1.125*(2**1) (-2.25)
+mul2: -1 (-1.0)
+add2: 1.125*(2**1) (2.25)
+mul3: 1 (1.0)
+add3: 1*(2**2) (4.0)
+
+Results:
+Custom final: 4.5
+Z3 final: 4.0
+Absolute error: 0.5
+Error percentage of final sum: 11.11%
+
+Attempt 6: Found larger error
+
+Inputs:
+x = 1.5*(2**-1) (0.75)
+a0 = 1.125*(2**1) (2.25)
+a1 = -1.5*(2**-3) (-0.1875)
+a2 = 1.125*(2**2) (4.5)
+a3 = -1.75*(2**-1) (-0.875)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.125*(2**1) (2.25)
+mul1: 1.75 (1.75)
+add1: 1.625 (1.625)
+mul2: 1.25 (1.25)
+add2: 1.5*(2**2) (6.0)
+mul3: 1.125*(2**2) (4.5)
+add3: 1.875*(2**1) (3.75)
+
+Z3 implementation:
+init: 1.125*(2**1) (2.25)
+mul1: 1.75 (1.75)
+add1: 1.5 (1.5)
+mul2: 1.125 (1.125)
+add2: 1.375*(2**2) (5.5)
+mul3: 1*(2**2) (4.0)
+add3: 1.5*(2**1) (3.0)
+
+Results:
+Custom final: 3.75
+Z3 final: 3.0
+Absolute error: 0.75
+Error percentage of final sum: 20.00%
+
+Attempt 7: Found larger error
+
+Inputs:
+x = 1.75*(2**-1) (0.875)
+a0 = -1.125*(2**1) (-2.25)
+a1 = 1.375*(2**1) (2.75)
+a2 = 1.625*(2**1) (3.25)
+a3 = 1.25*(2**2) (5.0)
+
+Step by step computation:
+
+Custom implementation:
+init: -1.125*(2**1) (-2.25)
+mul1: -1*(2**1) (-2.0)
+add1: 1.5*(2**-1) (0.75)
+mul2: 1.375*(2**-1) (0.6875)
+add2: 1*(2**2) (4.0)
+mul3: 1.75*(2**1) (3.5)
+add3: 1.125*(2**3) (9.0)
+
+Z3 implementation:
+init: -1.125*(2**1) (-2.25)
+mul1: -1*(2**1) (-2.0)
+add1: 1.5*(2**-1) (0.75)
+mul2: 1.25*(2**-1) (0.625)
+add2: 1*(2**2) (4.0)
+mul3: 1.75*(2**1) (3.5)
+add3: 1*(2**3) (8.0)
+
+Results:
+Custom final: 9.0
+Z3 final: 8.0
+Absolute error: 1.0
+Error percentage of final sum: 11.11%
+
+Attempt 8: Found larger error
+
+Inputs:
+x = 1.875*(2**-1) (0.9375)
+a0 = 1.875*(2**1) (3.75)
+a1 = 1.25*(2**2) (5.0)
+a2 = -1*(2**-2) (-0.25)
+a3 = 1*(2**2) (4.0)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.875*(2**1) (3.75)
+mul1: 1.75*(2**1) (3.5)
+add1: 1.125*(2**3) (9.0)
+mul2: 1*(2**3) (8.0)
+add2: 1*(2**3) (8.0)
+mul3: 1.875*(2**2) (7.5)
+add3: 1.5*(2**3) (12.0)
+
+Z3 implementation:
+init: 1.875*(2**1) (3.75)
+mul1: 1.75*(2**1) (3.5)
+add1: 1*(2**3) (8.0)
+mul2: 1.875*(2**2) (7.5)
+add2: 1.75*(2**2) (7.0)
+mul3: 1.625*(2**2) (6.5)
+add3: 1.25*(2**3) (10.0)
+
+Results:
+Custom final: 12.0
+Z3 final: 10.0
+Absolute error: 2.0
+Error percentage of final sum: 16.67%
+
+Attempt 9: Found larger error
+
+Inputs:
+x = -1.75*(2**-1) (-0.875)
+a0 = 1*(2**2) (4.0)
+a1 = -1.25*(2**2) (-5.0)
+a2 = 1.75*(2**1) (3.5)
+a3 = 1.375 (1.375)
+
+Step by step computation:
+
+Custom implementation:
+init: 1*(2**2) (4.0)
+mul1: -1.75*(2**1) (-3.5)
+add1: -1.125*(2**3) (-9.0)
+mul2: 1*(2**3) (8.0)
+add2: 1.5*(2**3) (12.0)
+mul3: -1.375*(2**3) (-11.0)
+add3: -1.25*(2**3) (-10.0)
+
+Z3 implementation:
+init: 1*(2**2) (4.0)
+mul1: -1.75*(2**1) (-3.5)
+add1: -1*(2**3) (-8.0)
+mul2: 1.75*(2**2) (7.0)
+add2: 1.25*(2**3) (10.0)
+mul3: -1.125*(2**3) (-9.0)
+add3: -1.875*(2**2) (-7.5)
+
+Results:
+Custom final: -10.0
+Z3 final: -7.5
+Absolute error: 2.5
+Error percentage of final sum: 25.00%
+
+Attempt 10: Found larger error
+
+Inputs:
+x = 1.75*(2**-1) (0.875)
+a0 = 1.125*(2**2) (4.5)
+a1 = 1.125*(2**2) (4.5)
+a2 = 1.5 (1.5)
+a3 = 1.5 (1.5)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.125*(2**2) (4.5)
+mul1: 1*(2**2) (4.0)
+add1: 1.125*(2**3) (9.0)
+mul2: 1*(2**3) (8.0)
+add2: 1.25*(2**3) (10.0)
+mul3: 1.125*(2**3) (9.0)
+add3: 1.375*(2**3) (11.0)
+
+Z3 implementation:
+init: 1.125*(2**2) (4.5)
+mul1: 1*(2**2) (4.0)
+add1: 1*(2**3) (8.0)
+mul2: 1.75*(2**2) (7.0)
+add2: 1*(2**3) (8.0)
+mul3: 1.75*(2**2) (7.0)
+add3: 1*(2**3) (8.0)
+
+Results:
+Custom final: 11.0
+Z3 final: 8.0
+Absolute error: 3.0
+Error percentage of final sum: 27.27%
+
+Attempt 11: Cannot find larger error
+
+Time taken: 6913.97 seconds
+PROVED: This is the true maximum error!

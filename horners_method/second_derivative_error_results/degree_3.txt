@@ -1,0 +1,280 @@
+
+Attempt 1: Found larger error
+
+Inputs:
+x = 1*(2**-4) (0.0625)
+a0 = 1.125*(2**2) (4.5)
+a1 = -1.25*(2**-5) (-0.0390625)
+a2 = +0.0 (0.0)
+a3 = 0.25*(2**-6) (0.00390625)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.125*(2**2) (4.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+value mul 2: 1.125*(2**-2) (0.28125)
+value add 2: 1*(2**-2) (0.25)
+first derivative mul 2: 1.125*(2**-2) (0.28125)
+first derivative add 2: 1.125*(2**-1) (0.5625)
+second derivative mul 2: 1.125*(2**-2) (0.28125)
+first derivative add 2: 1.75*(2**-1) (0.875)
+value penultimate computation: 1*(2**-6) (0.015625)
+first derivative final computation: 1.625*(2**-5) (0.05078125)
+value final computation: 0.375*(2**-6) (0.005859375)
+second derivative final computation: 1.75 (1.75)
+
+Z3 implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.125*(2**2) (4.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+value mul 2: 1.125*(2**-2) (0.28125)
+value add 2: 1*(2**-2) (0.25)
+first derivative mul 2: 1.125*(2**-2) (0.28125)
+first derivative add 2: 1*(2**-1) (0.5)
+second derivative mul 2: 1.125*(2**-2) (0.28125)
+first derivative add 2: 1.5*(2**-1) (0.75)
+value penultimate computation: 1*(2**-6) (0.015625)
+first derivative final computation: 1.5*(2**-5) (0.046875)
+value final computation: 0.25*(2**-6) (0.00390625)
+second derivative final computation: 1.5 (1.5)
+
+Results:
+Custom final: 1.75
+Z3 final: 1.5
+Absolute error: 0.25
+Error percentage of final sum: 14.29%
+
+Attempt 2: Found larger error
+
+Inputs:
+x = 1.75*(2**-1) (0.875)
+a0 = 1.875*(2**1) (3.75)
+a1 = -1.125*(2**2) (-4.5)
+a2 = +0.0 (0.0)
+a3 = +0.0 (0.0)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.875*(2**1) (3.75)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.875*(2**1) (3.75)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.875*(2**1) (3.75)
+value mul 2: 1.625*(2**1) (3.25)
+value add 2: -1.25 (-1.25)
+first derivative mul 2: 1.625*(2**1) (3.25)
+first derivative add 2: 1*(2**1) (2.0)
+second derivative mul 2: 1.625*(2**1) (3.25)
+first derivative add 2: 1.375*(2**2) (5.5)
+value penultimate computation: -1.125 (-1.125)
+first derivative final computation: 1.25*(2**-1) (0.625)
+value final computation: -1 (-1.0)
+second derivative final computation: 1.375*(2**3) (11.0)
+
+Z3 implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.875*(2**1) (3.75)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.875*(2**1) (3.75)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.875*(2**1) (3.75)
+value mul 2: 1.625*(2**1) (3.25)
+value add 2: -1.25 (-1.25)
+first derivative mul 2: 1.625*(2**1) (3.25)
+first derivative add 2: 1*(2**1) (2.0)
+second derivative mul 2: 1.625*(2**1) (3.25)
+first derivative add 2: 1.25*(2**2) (5.0)
+value penultimate computation: -1.125 (-1.125)
+first derivative final computation: 1.25*(2**-1) (0.625)
+value final computation: -1 (-1.0)
+second derivative final computation: 1.25*(2**3) (10.0)
+
+Results:
+Custom final: 11.0
+Z3 final: 10.0
+Absolute error: 1.0
+Error percentage of final sum: 9.09%
+
+Attempt 3: Found larger error
+
+Inputs:
+x = 1.75*(2**-1) (0.875)
+a0 = 1.125*(2**2) (4.5)
+a1 = -1.75 (-1.75)
+a2 = +0.0 (0.0)
+a3 = +0.0 (0.0)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.125*(2**2) (4.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+value mul 2: 1*(2**2) (4.0)
+value add 2: 1.125*(2**1) (2.25)
+first derivative mul 2: 1*(2**2) (4.0)
+first derivative add 2: 1.625*(2**2) (6.5)
+second derivative mul 2: 1*(2**2) (4.0)
+first derivative add 2: 1.375*(2**3) (11.0)
+value penultimate computation: 1*(2**1) (2.0)
+first derivative final computation: 1.875*(2**2) (7.5)
+value final computation: 1.75 (1.75)
+second derivative final computation: 1.375*(2**4) (22.0)
+
+Z3 implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.125*(2**2) (4.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.125*(2**2) (4.5)
+value mul 2: 1*(2**2) (4.0)
+value add 2: 1.125*(2**1) (2.25)
+first derivative mul 2: 1*(2**2) (4.0)
+first derivative add 2: 1.5*(2**2) (6.0)
+second derivative mul 2: 1*(2**2) (4.0)
+first derivative add 2: 1.25*(2**3) (10.0)
+value penultimate computation: 1*(2**1) (2.0)
+first derivative final computation: 1.75*(2**2) (7.0)
+value final computation: 1.75 (1.75)
+second derivative final computation: 1.25*(2**4) (20.0)
+
+Results:
+Custom final: 22.0
+Z3 final: 20.0
+Absolute error: 2.0
+Error percentage of final sum: 9.09%
+
+Attempt 4: Found larger error
+
+Inputs:
+x = 1.125*(2**-4) (0.0703125)
+a0 = 1.75*(2**1) (3.5)
+a1 = 1*(2**2) (4.0)
+a2 = -1.25*(2**2) (-5.0)
+a3 = +0.0 (0.0)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.75*(2**1) (3.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.75*(2**1) (3.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.75*(2**1) (3.5)
+value mul 2: 1*(2**-2) (0.25)
+value add 2: 1.125*(2**2) (4.5)
+first derivative mul 2: 1*(2**-2) (0.25)
+first derivative add 2: 1.25*(2**2) (5.0)
+second derivative mul 2: 1*(2**-2) (0.25)
+first derivative add 2: 1.375*(2**2) (5.5)
+value penultimate computation: -1.125*(2**2) (-4.5)
+first derivative final computation: -1*(2**2) (-4.0)
+value final computation: -1.25*(2**-2) (-0.3125)
+second derivative final computation: 1.375*(2**3) (11.0)
+
+Z3 implementation:
+init: +0.0 (0.0)
+value mul 1: +0.0 (0.0)
+value add 1: 1.75*(2**1) (3.5)
+first derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.75*(2**1) (3.5)
+second derivative mul 1: +0.0 (0.0)
+first derivative add 1: 1.75*(2**1) (3.5)
+value mul 2: 1*(2**-2) (0.25)
+value add 2: 1*(2**2) (4.0)
+first derivative mul 2: 1*(2**-2) (0.25)
+first derivative add 2: 1*(2**2) (4.0)
+second derivative mul 2: 1*(2**-2) (0.25)
+first derivative add 2: 1*(2**2) (4.0)
+value penultimate computation: -1.125*(2**2) (-4.5)
+first derivative final computation: -1*(2**2) (-4.0)
+value final computation: -1.25*(2**-2) (-0.3125)
+second derivative final computation: 1*(2**3) (8.0)
+
+Results:
+Custom final: 11.0
+Z3 final: 8.0
+Absolute error: 3.0
+Error percentage of final sum: 27.27%
+
+Attempt 5: Found larger error
+
+Inputs:
+x = -1.75*(2**-1) (-0.875)
+a0 = 1.5*(2**1) (3.0)
+a1 = -1.5*(2**1) (-3.0)
+a2 = -1.25*(2**2) (-5.0)
+a3 = +0.0 (0.0)
+
+Step by step computation:
+
+Custom implementation:
+init: +0.0 (0.0)
+value mul 1: -0.0 (-0.0)
+value add 1: 1.5*(2**1) (3.0)
+first derivative mul 1: -0.0 (-0.0)
+first derivative add 1: 1.5*(2**1) (3.0)
+second derivative mul 1: -0.0 (-0.0)
+first derivative add 1: 1.5*(2**1) (3.0)
+value mul 2: -1.375*(2**1) (-2.75)
+value add 2: -1.5*(2**2) (-6.0)
+first derivative mul 2: -1.375*(2**1) (-2.75)
+first derivative add 2: -1.125*(2**3) (-9.0)
+second derivative mul 2: -1.375*(2**1) (-2.75)
+first derivative add 2: -1.5*(2**3) (-12.0)
+value penultimate computation: 1*(2**-1) (0.5)
+first derivative final computation: 1.125*(2**3) (9.0)
+value final computation: -1.75*(2**-2) (-0.4375)
+second derivative final computation: -1.5*(2**4) (-24.0)
+
+Z3 implementation:
+init: +0.0 (0.0)
+value mul 1: -0.0 (-0.0)
+value add 1: 1.5*(2**1) (3.0)
+first derivative mul 1: -0.0 (-0.0)
+first derivative add 1: 1.5*(2**1) (3.0)
+second derivative mul 1: -0.0 (-0.0)
+first derivative add 1: 1.5*(2**1) (3.0)
+value mul 2: -1.25*(2**1) (-2.5)
+value add 2: -1.375*(2**2) (-5.5)
+first derivative mul 2: -1.25*(2**1) (-2.5)
+first derivative add 2: -1*(2**3) (-8.0)
+second derivative mul 2: -1.25*(2**1) (-2.5)
+first derivative add 2: -1.25*(2**3) (-10.0)
+value penultimate computation: +0.0 (0.0)
+first derivative final computation: 1.75*(2**2) (7.0)
+value final computation: +0.0 (0.0)
+second derivative final computation: -1.25*(2**4) (-20.0)
+
+Results:
+Custom final: -24.0
+Z3 final: -20.0
+Absolute error: 4.0
+Error percentage of final sum: 16.67%
+
+Attempt 6: Cannot find larger error
+
+Time taken: 2812.63 seconds
+PROVED: This is the true maximum error!

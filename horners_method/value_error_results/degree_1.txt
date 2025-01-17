@@ -1,0 +1,80 @@
+
+Attempt 1: Found larger error
+
+Inputs:
+x = 1.875*(2**-5) (0.05859375)
+a0 = 1.125*(2**1) (2.25)
+a1 = -1.375*(2**1) (-2.75)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.125*(2**1) (2.25)
+mul1: 1*(2**-3) (0.125)
+add1: -1.375*(2**1) (-2.75)
+
+Z3 implementation:
+init: 1.125*(2**1) (2.25)
+mul1: 1*(2**-3) (0.125)
+add1: -1.25*(2**1) (-2.5)
+
+Results:
+Custom final: -2.75
+Z3 final: -2.5
+Absolute error: 0.25
+Error percentage of final sum: 9.09%
+
+Attempt 2: Found larger error
+
+Inputs:
+x = 1.75*(2**-3) (0.21875)
+a0 = 1.125 (1.125)
+a1 = 1*(2**2) (4.0)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.125 (1.125)
+mul1: 1*(2**-2) (0.25)
+add1: 1.125*(2**2) (4.5)
+
+Z3 implementation:
+init: 1.125 (1.125)
+mul1: 1*(2**-2) (0.25)
+add1: 1*(2**2) (4.0)
+
+Results:
+Custom final: 4.5
+Z3 final: 4.0
+Absolute error: 0.5
+Error percentage of final sum: 11.11%
+
+Attempt 3: Found larger error
+
+Inputs:
+x = 1.75*(2**-1) (0.875)
+a0 = 1.125*(2**2) (4.5)
+a1 = 1.125*(2**2) (4.5)
+
+Step by step computation:
+
+Custom implementation:
+init: 1.125*(2**2) (4.5)
+mul1: 1*(2**2) (4.0)
+add1: 1.125*(2**3) (9.0)
+
+Z3 implementation:
+init: 1.125*(2**2) (4.5)
+mul1: 1*(2**2) (4.0)
+add1: 1*(2**3) (8.0)
+
+Results:
+Custom final: 9.0
+Z3 final: 8.0
+Absolute error: 1.0
+Error percentage of final sum: 11.11%
+
+Attempt 4: Cannot find larger error
+
+Time taken: 8.90 seconds
+PROVED: This is the true maximum error!
