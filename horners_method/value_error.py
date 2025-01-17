@@ -1,7 +1,8 @@
 from z3 import *
-from fp_mul.ieee_compliant import fp_mul
-from fp_sum.ieee_compliant import fp_sum
+from fp_mul.one_rounding_bit import fp_mul
+from fp_sum.one_rounding_bit import fp_sum
 import time
+import sys
 
 
 def parse_z3_fp(fp_str):
@@ -19,27 +20,27 @@ def format_decimal(val):
     return val
 
 
-def maximize_horner_error(degree, max_attempts=20):
+def maximize_horner_error(degree, exp=4, mant=4, max_attempts=50):
     start = time.time()
     solver = Solver()
-    FP8 = FPSort(4, 4)
+    FP8 = FPSort(exp, mant)
 
     # Create variables
     x = FP('x', FP8)
     coeffs = [FP(f'a{i}', FP8) for i in range(degree + 1)]
 
-    # Add range constraints
-    for var in [x] + coeffs:
-        solver.add(fpGEQ(var, FPVal(0, FP8)))
-        solver.add(fpLEQ(var, FPVal(0.1, FP8)))
+    # Add constraints for coefficients
+    for var in coeffs:
+        solver.add(fpGEQ(var, FPVal(-5, FP8)))
+        solver.add(fpLEQ(var, FPVal(5, FP8)))
         solver.add(Not(fpIsNaN(var)))
         solver.add(Not(fpIsInf(var)))
 
-    # Make all variables different
-    '''all_vars = [x] + coeffs
-    for i in range(len(all_vars)):
-        for j in range(i + 1, len(all_vars)):
-            solver.add(Not(fpEQ(all_vars[i], all_vars[j])))'''
+    # Add constraints for x
+    solver.add(fpGT(x, FPVal(-1, FP8)))
+    solver.add(fpLT(x, FPVal(1, FP8)))
+    solver.add(Not(fpIsNaN(x)))
+    solver.add(Not(fpIsInf(x)))
 
     # Compute custom implementation with tracking
     def compute_custom():
@@ -71,7 +72,6 @@ def maximize_horner_error(degree, max_attempts=20):
     result_z3, z3_steps = compute_z3()
 
     # Add constraints for meaningful results
-    #solver.add(fpLEQ(fpAbs(result_custom), FPVal(degree + 1, FP16)))
     solver.add(Not(fpIsNaN(result_custom)))
     solver.add(Not(fpIsInf(result_custom)))
     solver.add(Not(fpIsNaN(result_z3)))
@@ -109,12 +109,9 @@ def maximize_horner_error(degree, max_attempts=20):
 
             print("\nStep by step computation:")
             print("\nCustom implementation:")
-            running_sum = 0
             for step_name, step_val in custom_steps:
                 val = format_decimal(str(m.eval(step_val)))
                 print(f"{step_name}: {m.eval(step_val)} ({val})")
-                if step_name.startswith("add"):
-                    running_sum = val
 
             print("\nZ3 implementation:")
             for step_name, step_val in z3_steps:
@@ -124,7 +121,7 @@ def maximize_horner_error(degree, max_attempts=20):
             custom_final = format_decimal(str(m.eval(result_custom)))
             z3_final = format_decimal(str(m.eval(result_z3)))
             abs_error = abs(custom_final - z3_final)
-            error_percentage = 0 if running_sum == 0 else (abs_error / abs(running_sum)) * 100
+            error_percentage = 0 if custom_final == 0 else (abs_error / abs(custom_final)) * 100
 
             print(f"\nResults:")
             print(f"Custom final: {custom_final}")
@@ -149,7 +146,10 @@ def maximize_horner_error(degree, max_attempts=20):
             print("Note: Larger errors might be possible")
         solver.pop()
 
-
+'''
+    The first command line argument is the degree of the polynomial to maximize
+    The second command line argument is number of bits to use for the exponent
+    The third command line argument is number of bits to use for the mantissa (including the implicit bit)
+'''
 if __name__ == "__main__":
-    maximize_horner_error(2)
-
+    maximize_horner_error(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
