@@ -46,3 +46,20 @@ def split_input(v: BitVecRef, total_bits: int, sign_bits: int, exp_bits: int, gr
         Extract(total_bits - sign_bits - exp_bits - 1, grs_bits, v),
         Extract(grs_bits - 1, 0, v)
     ]
+
+def split_input_trun(v: BitVecRef, total_bits: int, sign_bits: int, exp_bits: int) -> list[BitVecRef]:
+    return [
+        Extract(total_bits - 1, total_bits - sign_bits, v),  # sign
+        Extract(total_bits - sign_bits - 1, total_bits - sign_bits - exp_bits, v),  # exponent
+        Extract(total_bits - sign_bits - exp_bits - 1, 0, v)  # mantissa
+    ]
+
+def count_leading_zeros(bv, result_size):
+    size = bv.size()
+    result = BitVecVal(size, result_size)
+    for i in range(size):
+        condition = Extract(size - 1 - i, size - 1 - i, bv) == 1
+        result = If(And(condition, result == BitVecVal(size, result_size)),
+                    BitVecVal(i, result_size),
+                    result)
+    return result
