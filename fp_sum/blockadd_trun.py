@@ -14,10 +14,9 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     SIGN_BITS = 1
     EXP_BITS = sort.ebits()
     MANT_BITS = sort.sbits() - 1
-    GRS_BITS = 3
-    TOTAL_BITS = SIGN_BITS + EXP_BITS + MANT_BITS + GRS_BITS
-    FULL_MANT_BITS = 1 + MANT_BITS + GRS_BITS
-    EXTENDED_BITS = FULL_MANT_BITS + 3
+    TOTAL_BITS = SIGN_BITS + EXP_BITS + MANT_BITS
+    FULL_MANT_BITS = 1 + MANT_BITS
+    EXTENDED_BITS = FULL_MANT_BITS + 2
 
     def debug_print(msg, val):
         if debug_solver and debug_solver.check() == sat:
@@ -34,7 +33,7 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
                 try:
                     if is_bool(val):
                         eval_val = m.eval(val)
-                        print(f"{msg}: {1 if eval_val else 0}")  # Just output 1 or 0
+                        print(f"{msg}: {1 if eval_val else 0}")
                     else:
                         eval_val = m.eval(val)
                         print(f"{msg}: {bin(eval_val.as_long())[2:].zfill(val.size())}")
@@ -45,19 +44,17 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     result_mant_nan = BitVecVal((1 << MANT_BITS) - 1, MANT_BITS)
     result_mant_inf = BitVecVal(0, MANT_BITS)
 
-    values = [Concat(fpToIEEEBV(x), BitVecVal(0, GRS_BITS)) for x in inputs]
+    values = [fpToIEEEBV(x) for x in inputs]
     debug_print("Initial values", values)
 
-    components = [split_input(v, TOTAL_BITS, SIGN_BITS, EXP_BITS, GRS_BITS) for v in values]
+    components = [split_input_trun(v, TOTAL_BITS, SIGN_BITS, EXP_BITS) for v in values]
     signs = [c[0] for c in components]
     exps = [c[1] for c in components]
     mants = [c[2] for c in components]
-    grs = [c[3] for c in components]
 
     debug_print("Signs", signs)
     debug_print("Exponents", exps)
     debug_print("Mantissas", mants)
-    debug_print("GRS bits", grs)
 
     infinities = [is_infinity(e, m, EXP_BITS) for e, m in zip(exps, mants)]
     nans = [is_nan(e, m, EXP_BITS) for e, m in zip(exps, mants)]
@@ -74,9 +71,9 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     debug_print("Max exponent", max_exp)
 
     full_mants = [If(sub,
-                     Concat(BitVecVal(0, 1), mant, gr),
-                     Concat(BitVecVal(1, 1), mant, gr))
-                  for sub, mant, gr in zip(subnormals, mants, grs)]
+                     Concat(BitVecVal(0, 1), mant),
+                     Concat(BitVecVal(1, 1), mant))
+                  for sub, mant in zip(subnormals, mants)]
     debug_print("Full mantissas", full_mants)
 
     exp_diffs = []
@@ -86,7 +83,6 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     debug_print("Exponent differences", exp_diffs)
 
     aligned_mants = []
-    sticky_bits = []
 
     for i in range(len(inputs)):
         signed_mant = If(signs[i] == BitVecVal(1, 1),
@@ -98,14 +94,6 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
         debug_print(f"Extended mantissa {i}", extended_mant)
 
         shift_amount = exp_diffs[i]
-
-        mask = (BitVecVal(1, EXTENDED_BITS) << shift_amount) - 1
-        sticky = UGT(extended_mant & mask, BitVecVal(0, EXTENDED_BITS))
-        debug_print(f"Mask for sticky {i}", mask)
-        debug_print(f"Masked value {i}", extended_mant & mask)
-        debug_print(f"Sticky bit set for value {i}", sticky)
-        sticky_bits.append(sticky)
-
         shifted_mant = extended_mant >> shift_amount
         aligned_mants.append(shifted_mant)
 
@@ -124,37 +112,11 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     normalized_sum = sum_mant << ZeroExt(EXTENDED_BITS - EXP_BITS, leading_zeros)
     debug_print("Normalized sum", normalized_sum)
 
-    ext_bits = 2
-    final_exp = If(ULE(leading_zeros, 2), max_exp + 3 - leading_zeros, max_exp + 3 - leading_zeros)
+    final_exp = If(ULE(leading_zeros, 2), max_exp + 2 - leading_zeros, max_exp + 2 - leading_zeros)
     debug_print("Final exponent", final_exp)
 
     final_mant = Extract(EXTENDED_BITS - 2, EXTENDED_BITS - MANT_BITS - 1, normalized_sum)
-    grs_bits = Extract(GRS_BITS - 1 + ext_bits, ext_bits, normalized_sum)
     debug_print("Final mantissa", final_mant)
-    debug_print("Final GRS bits", grs_bits)
-
-    guard_bit = Extract(2, 2, grs_bits)
-    round_bit = Extract(1, 1, grs_bits)
-    sticky_bit = Or(Or(*sticky_bits), Extract(0, 0, grs_bits) != BitVecVal(0, 1))
-
-
-    round_up = And(guard_bit == BitVecVal(1, 1),
-                   Or(sticky_bit,
-                      round_bit == BitVecVal(1, 1),
-                      Extract(0, 0, final_mant) == BitVecVal(1, 1)))
-
-
-    rounding_increment = If(round_up, BitVecVal(1, MANT_BITS), BitVecVal(0, MANT_BITS))
-    rounded_mant = final_mant + rounding_increment
-    debug_print("Rounded mantissa", rounded_mant)
-
-    mant_overflow = ULT(rounded_mant, final_mant)
-    final_exp = If(mant_overflow, final_exp + 1, final_exp)
-
-    final_mant = rounded_mant
-
-    debug_print("mantissa after overflow", final_mant)
-
 
     any_nan = Or(*nans)
     any_inf = Or(*infinities)
@@ -171,4 +133,4 @@ def fp_multi_sum(inputs: List[FPRef], sort: FPSortRef, debug_solver=None):
     debug_print("Final exponent after special cases", final_exp)
 
     return fpBVToFP(Concat(BitVecVal(1, 1) if is_negative else BitVecVal(0, 1),
-                           final_exp, final_mant), sort)
+                          final_exp, final_mant), sort)

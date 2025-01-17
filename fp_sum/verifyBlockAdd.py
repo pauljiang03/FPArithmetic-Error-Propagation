@@ -7,12 +7,11 @@ Float16 = FPSort(5, 11)
 def test_specific_case():
     s = Solver()
 
-    # Create the specific values
-    x = FPVal(1.0 * (2 ** 9), Float16)
-    y = FPVal(1.0 * (2 ** -3), Float16)
-    z = FPVal(1.0 * (2 ** 8), Float16)
+    x = FPVal(0.0068359375 * (2 ** -14), Float16)
+    y = FPVal(0.0048828125 * (2 ** -14), Float16)
+    z = FPVal(0.0029296875 * (2 ** -14), Float16)
 
-    # Calculate sums
+
     z3_sum = x + y + z
     manual_sum = fp_multi_sum([x, y, z], Float16, debug_solver=s)
 
@@ -23,6 +22,7 @@ def test_specific_case():
         print(f"x = {m.eval(x)}")
         print(f"y = {m.eval(y)}")
         print(f"z = {m.eval(z)}")
+
         print(f"Z3 sum = {m.eval(z3_sum)}")
         print(f"Your sum = {m.eval(manual_sum)}")
 
@@ -35,38 +35,38 @@ def test_specific_case():
 def test_all_multi_additions():
     s = Solver()
 
-    # Create three FP variables
     x = FP('x', Float16)
     y = FP('y', Float16)
     z = FP('z', Float16)
 
-    # Add constraint that x is the largest
-    s.add(fpGT(x, y))
-    s.add(fpGT(x, z))
     s.add(fpGT(y, 0))
     s.add(fpGT(z, 0))
 
-
-    # Avoid special cases for basic test
     s.add(Not(fpIsInf(x)))
     s.add(Not(fpIsNaN(x)))
-    s.add(Not(fpIsZero(x)))
     s.add(Not(fpIsInf(y)))
     s.add(Not(fpIsNaN(y)))
     s.add(Not(fpIsInf(z)))
     s.add(Not(fpIsNaN(z)))
 
-    # Add range constraints
     s.add(fpGT(x, y))
     s.add(fpGT(x, z))
 
-    #s.add(fpGT(y, FPVal(0.1, Float16)))
-    #s.add(fpGT(z, FPVal(0.1, Float16)))
-
-    # Compare multi_sum against Z3's native addition
     z3_sum = x + y + z
     manual_sum = fp_multi_sum([x, y, z], Float16)
     s.add(z3_sum != manual_sum)
+
+    z3_bv = fpToIEEEBV(z3_sum)
+    manual_bv = fpToIEEEBV(manual_sum)
+
+    z3_exp = Extract(14, 10, z3_bv)
+    manual_exp = Extract(14, 10, manual_bv)
+
+    s.add(z3_exp != manual_exp)
+    #s.add(z3_exp != manual_exp + 1)
+    #s.add(z3_exp != manual_exp - 1)
+
+
 
     if s.check() == sat:
         m = s.model()

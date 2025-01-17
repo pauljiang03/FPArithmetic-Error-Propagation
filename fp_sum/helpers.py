@@ -33,3 +33,10 @@ def split_input(v: BitVecRef, total_bits: int, sign_bits: int, exp_bits: int, gr
         Extract(total_bits - sign_bits - exp_bits - 1, grs_bits, v),
         Extract(grs_bits - 1, 0, v)
     ]
+
+def split_input_trun(v: BitVecRef, total_bits: int, sign_bits: int, exp_bits: int) -> list[BitVecRef]:
+    return [
+        Extract(total_bits - 1, total_bits - sign_bits, v),  # sign
+        Extract(total_bits - sign_bits - 1, total_bits - sign_bits - exp_bits, v),  # exponent
+        Extract(total_bits - sign_bits - exp_bits - 1, 0, v)  # mantissa
+    ]
