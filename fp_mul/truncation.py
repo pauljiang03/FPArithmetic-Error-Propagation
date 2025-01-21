@@ -1,7 +1,6 @@
 from .helpers import *
 
 #TODO: need to investigate whether there is overflow to infinity issue (otherwise is ok)
-
 def normalize_subnormal_trun(mant, is_subnormal, mant_bits, full_mant_bits):
     base_mant = Concat(BitVecVal(0, 1), mant)
     lz_count = count_leading_zeros(base_mant, mant_bits + 1)
